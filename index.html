@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Synth Piano for Sight Singing</title>
+<style>
+  :root { --bg:#f4f1ec; --fg:#222; --panel:#e6e1d8; --accent:#c0562f; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#17181b; --fg:#e8e6e1; --panel:#26282d; --accent:#e8845c; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; display:flex; flex-direction:column; align-items:center;
+         justify-content:center; gap:24px; padding:20px 8px; background:var(--bg); color:var(--fg);
+         font-family: system-ui, sans-serif; }
+  .hero { text-align:center; }
+  .logo { width:54px; height:54px; margin:0 auto 10px; border-radius:50%; display:grid; place-items:center;
+          font-size:30px; color:#fff; background:linear-gradient(135deg, var(--accent), #2f7de1);
+          box-shadow:0 6px 18px rgba(47,125,225,.35); }
+  h1 { margin:0; font-family:"Iowan Old Style", Palatino, Georgia, serif; font-size:clamp(1.8rem, 5vw, 3rem);
+       font-weight:700; letter-spacing:.01em; line-height:1.1;
+       background:linear-gradient(90deg, var(--accent), #2f7de1); -webkit-background-clip:text;
+       background-clip:text; color:transparent; }
+  h1 span { display:block; margin-top:.5em; font-family:system-ui, sans-serif; font-size:.3em; font-weight:600;
+            letter-spacing:.4em; text-transform:uppercase; }
+  .manual { width:100%; max-width:920px; background:var(--panel); border-radius:12px; padding:6px 22px 18px;
+            font-size:.9rem; line-height:1.55; }
+  .manual summary { cursor:pointer; font-weight:600; font-size:1.05rem; padding:12px 0; }
+  .manual h3 { margin:16px 0 4px; font-size:.95rem; color:var(--accent); }
+  .manual p, .manual ol, .manual ul { margin:4px 0; }
+  .manual ol, .manual ul { padding-left:1.3em; }
+  .key.home::before { content:"Do"; position:absolute; left:0; right:0; bottom:34px; text-align:center;
+                      font-size:clamp(.65rem, 1.4vw, .9rem); font-weight:700; color:#a64a28; pointer-events:none; }
+  .lower { display:flex; flex-wrap:wrap; gap:20px; width:100%; max-width:1000px; align-items:flex-start; justify-content:center; }
+  .lower .manual { flex:1 1 420px; width:auto; max-width:none; }
+  .ladder { flex:0 0 300px; max-width:100%; background:var(--panel); border-radius:12px; padding:14px 16px 16px; }
+  .ladder h2 { margin:0 0 4px; font-size:1.05rem; }
+  .ladder p { margin:0 0 10px; font-size:.8rem; opacity:.75; line-height:1.4; }
+  #ladder { display:flex; flex-direction:column; gap:3px; }
+  .lrow { display:grid; grid-template-columns:2.6em 1fr 4.8em; align-items:center; gap:6px; width:100%;
+          text-align:left; padding:5px 10px; border:1px solid transparent; border-radius:8px; font-size:.9rem;
+          background:var(--bg); color:var(--fg); }
+  .lrow.dia { font-weight:700; border-color:var(--accent); }
+  .lrow.chr { width:calc(100% - 18px); margin-left:18px; opacity:.85; }
+  .lrow.down { background:var(--accent); color:#fff; }
+  .lrow.target { background:#6fd68a; color:#0b3b1b; border-color:#2fa85a; opacity:1; }
+  .reveal { flex-direction:row; align-items:center; gap:6px; margin-top:12px; }
+  kbd { background:var(--bg); border:1px solid var(--accent); border-radius:4px; padding:0 5px; font-size:.85em; }
+  .controls { display:flex; flex-wrap:wrap; gap:20px; align-items:center; justify-content:center;
+              background:var(--panel); padding:12px 20px; border-radius:12px; }
+  label { display:flex; flex-direction:column; gap:4px; font-size:.8rem; }
+  input[type=range] { accent-color: var(--accent); width:160px; }
+  button { background:var(--bg); color:var(--fg); border:1px solid var(--accent); border-radius:8px;
+           padding:8px 14px; cursor:pointer; font-size:.85rem; }
+  button.on { background:var(--accent); color:#fff; }
+  .wrap { width:100%; }
+  .keyboard { position:relative; width:100%; height:clamp(150px, 20vw, 360px); user-select:none; touch-action:none;
+              background:#111; padding:8px 8px 0; border-radius:10px 10px 4px 4px; }
+  .inner { position:relative; height:100%; }
+  .key { position:absolute; top:0; cursor:pointer; }
+  .white { height:100%; background:linear-gradient(#fff,#ecebe6); border:1px solid #888;
+           border-radius:0 0 6px 6px; z-index:1; }
+  .black { height:62%; background:linear-gradient(#333,#000); border-radius:0 0 4px 4px; z-index:2; }
+  .white.down { background:linear-gradient(#f3c9b6,#e8a98c); }
+  .black.down { background:linear-gradient(#a64a28,#6d2c14); }
+  .white.target { background:linear-gradient(#c4f5cc,#6fd68a); box-shadow:0 0 18px #4cd37a inset; }
+  .black.target { background:linear-gradient(#35b563,#16703a); }
+  .key.sel::after { content:""; position:absolute; left:50%; bottom:10px; width:12px; height:12px;
+                    margin-left:-6px; border-radius:50%; background:#2f7de1; box-shadow:0 0 0 2px rgba(255,255,255,.7); }
+  .black.sel::after { bottom:8px; }
+  button:disabled, select:disabled { opacity:.4; cursor:default; }
+  select { background:var(--bg); color:var(--fg); border:1px solid var(--accent); border-radius:8px;
+           padding:6px 8px; font-size:.85rem; }
+  #status { font-size:.8rem; min-width:14em; opacity:.85; }
+  .tr { display:flex; align-items:center; gap:6px; }
+  #trVal, #octVal { min-width:4.2em; text-align:center; font-variant-numeric:tabular-nums; font-size:.9rem; }
+  .hint { font-size:.75rem; opacity:.7; text-align:center; max-width:600px; }
+</style>
+</head>
+<body>
+  <header class="hero">
+    <div class="logo" aria-hidden="true">♪</div>
+    <h1>Synth Piano <span>for Sight Singing</span></h1>
+  </header>
+
+  <div class="controls">
+    <label>Reverb mix <input id="mix" type="range" min="0" max="100" value="35"></label>
+    <label>Room size <input id="size" type="range" min="0.5" max="6" step="0.1" value="2.8"></label>
+    <label>Volume <input id="vol" type="range" min="0" max="100" value="70"></label>
+    <label>Sound
+      <select id="inst">
+        <optgroup label="Pianos">
+          <option value="grand">Grand piano</option>
+          <option value="bright">Bright piano</option>
+          <option value="mellow">Mellow piano</option>
+          <option value="electric">Electric piano</option>
+          <option value="honky">Honky-tonk</option>
+          <option value="musicbox">Music box</option>
+        </optgroup>
+        <optgroup label="Synths">
+          <option value="pad">Warm pad</option>
+          <option value="glass">Glass pad</option>
+          <option value="lead">Square lead</option>
+          <option value="brass">Synth brass</option>
+          <option value="organ">Organ</option>
+          <option value="pluck">Synth pluck</option>
+          <option value="vibrato">Vibrato lead</option>
+        </optgroup>
+        <optgroup label="Retro synths">
+          <option value="chip">Chiptune square</option>
+          <option value="nes">8-bit triangle</option>
+          <option value="moog">Moog-style lead</option>
+          <option value="juno">80s poly synth</option>
+          <option value="strings">String machine</option>
+          <option value="supersaw">Supersaw</option>
+          <option value="sync">Sync-style lead</option>
+          <option value="wobble">Wobble bass</option>
+        </optgroup>
+      </select>
+    </label>
+    <label>Transpose
+      <span class="tr">
+        <button id="trDn" title="Down one semitone">−</button>
+        <span id="trVal">0 st</span>
+        <button id="trUp" title="Up one semitone">+</button>
+        <button id="trRnd" title="Random transposition">🎲 Random</button>
+        <button id="trRst" title="Back to 0">Reset</button>
+      </span>
+    </label>
+    <label>Octave
+      <span class="tr">
+        <button id="octDn" title="Down one octave">−</button>
+        <span id="octVal">0</span>
+        <button id="octUp" title="Up one octave">+</button>
+      </span>
+    </label>
+  </div>
+
+  <div class="controls" id="trainer">
+    <button id="selBtn" title="Click keys to choose the notes to practice">Select</button>
+    <button id="clrBtn" title="Clear selected notes">Clear</button>
+    <label>Tempo: <span id="bpmVal">20 BPM</span>
+      <input id="bpm" type="range" min="0" max="1000" step="1" value="301"></label>
+    <label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="snd" checked> Play sound</label>
+    <label>Sound delay
+      <select id="delay">
+        <option value="0">None</option>
+        <option value="0.125">1/8 beat</option>
+        <option value="0.25">1/4 beat</option>
+        <option value="0.3333">1/3 beat</option>
+        <option value="0.5">1/2 beat</option>
+        <option value="0.6667">2/3 beat</option>
+        <option value="0.75" selected>3/4 beat</option>
+      </select>
+    </label>
+    <button id="playBtn">Play</button>
+    <span id="status">0 notes selected</span>
+  </div>
+
+  <div class="wrap"><div class="keyboard"><div class="inner" id="kb"></div></div></div>
+
+  <div class="lower">
+  <section class="ladder" aria-label="Solfege ladder">
+    <h2>Solfege ladder</h2>
+    <p>All 12 chromatic tones, counted from middle C = Do = 1. Bold rows are the major scale. Click and hold a row to hear it.
+    The name after the dot is the other common spelling (Di = raised Do = Ra).</p>
+    <div id="ladder"></div>
+    <label class="reveal"><input type="checkbox" id="reveal"> Show the lit note on the ladder</label>
+  </section>
+  <details class="manual" open>
+    <summary>Short manual</summary>
+
+    <h3>Playing</h3>
+    <p>Click or touch the keys. Drag across them for a glissando; chords work with multitouch. On a computer keyboard
+    the <kbd>Z</kbd>–<kbd>M</kbd> and <kbd>Q</kbd>–<kbd>U</kbd> rows play upward from C3
+    (<kbd>S D G H J</kbd> and <kbd>2 3 5 6 7</kbd> are the black keys).</p>
+
+    <h3>Sound</h3>
+    <p>Pick a piano or synth sound from the <b>Sound</b> menu. Synth and retro sounds hold for as long as you hold the key.
+    <b>Reverb mix</b> sets how much room you hear, <b>Room size</b> sets how long the tail is
+    (it updates when you let go of the slider), and <b>Volume</b> is the master level.</p>
+
+    <h3>Changing the pitch</h3>
+    <ul>
+      <li><b>Transpose</b> shifts the pitch by semitones (±24). <b>🎲 Random</b> picks a new random shift between −12 and +12, and <b>Reset</b> returns to 0.</li>
+      <li><b>Octave</b> shifts by whole octaves (±2) and is never changed by Random or Reset.</li>
+      <li>The keys on screen never move. Only the sound changes, and only for notes you play afterwards.</li>
+    </ul>
+
+    <h3>Sight-singing trainer</h3>
+    <ol>
+      <li>Press <b>Select</b> and click the notes you want to practise. They get blue dots (you hear a short preview). Click again to remove one, or press <b>Clear</b>.</li>
+      <li>Set the <b>Tempo</b> (10–100 BPM; the slider is logarithmic, so the slow end is finely adjustable).</li>
+      <li>Press <b>Play</b>. On every beat a random selected note lights up green and stays lit until the next beat. The same note never appears twice in a row. Press <b>Stop</b> to end.</li>
+      <li><b>Play sound</b> lets you hear the note too. <b>Sound delay</b> sets how long after the light it sounds, as a fraction of a beat, so you can sing first and then check yourself. Turn Play sound off to train from sight alone.</li>
+    </ol>
+
+    <h3>Home and scale degrees</h3>
+    <ul>
+      <li><b>Treat middle C (the key marked Do) as home</b>: 1, or Do. Keep doing this whatever Transpose and Octave are set to. Those settings change the pitch you hear, not which key is home, so you always sing each lit key as its degree relative to middle C.</li>
+      <li><b>Sing the name of every note</b> as it lights up, either as a scale degree (1, 2, 3, ♭3, 4, ♯4 …) or in solfege (Do, Re, Mi, Me …). Naming a note ties its sound to its job in the key.</li>
+      <li>Use the <b>Solfege ladder</b> to find the name of any of the 12 chromatic tones. Hold a row to hear the pitch, and tick “Show the lit note on the ladder” when you want to check your answer.</li>
+    </ul>
+
+    <h3>Tips</h3>
+    <p>Start with two or three notes at a slow tempo and a long delay, then add notes and speed up. Use
+    <b>Random</b> transpose to practise relative pitch: the shapes stay the same but the notes you hear change.
+    Wobble bass sounds best with Octave set to −1 or −2. The pure-sine sounds (Mellow, Music box, Glass pad, Organ, 8-bit triangle) are the easiest to match with your voice.</p>
+  </details>
+  </div>
+
+<script>
+const START = 48;            // C3
+const OCTAVES = 3;
+const WHITE = [0,2,4,5,7,9,11];
+const BLACK_AFTER = {0:1, 1:3, 3:6, 4:8, 5:10};   // white index in octave -> semitone offset
+let ctx, bus, dry, wet, convolver, master;
+
+// ---------- Audio setup ----------
+function initAudio() {
+  if (ctx) { if (ctx.state === "suspended") ctx.resume(); return; }
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  master = ctx.createGain();
+  const comp = ctx.createDynamicsCompressor();
+  master.connect(comp).connect(ctx.destination);
+
+  bus = ctx.createGain();
+  dry = ctx.createGain();
+  wet = ctx.createGain();
+  convolver = ctx.createConvolver();
+  bus.connect(dry).connect(master);
+  bus.connect(convolver).connect(wet).connect(master);
+
+  makeReverb(parseFloat(sizeEl.value));
+  applyMix(); applyVol();
+}
+
+// Generate a stereo impulse response: decaying noise, progressively darkened
+function makeReverb(seconds) {
+  const rate = ctx.sampleRate, len = Math.floor(rate * seconds);
+  const ir = ctx.createBuffer(2, len, rate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = ir.getChannelData(ch);
+    let lp = 0;
+    for (let i = 0; i < len; i++) {
+      const t = i / len;
+      const noise = Math.random() * 2 - 1;
+      const k = 0.15 + 0.85 * (1 - t);            // tail gets darker over time
+      lp += (noise - lp) * k;
+      d[i] = lp * Math.pow(1 - t, 2.6) * (i < 400 ? i / 400 : 1);  // fade in avoids click
+    }
+  }
+  convolver.buffer = ir;
+}
+
+function applyMix() {
+  if (!ctx) return;
+  const m = mixEl.value / 100;
+  dry.gain.value = 1 - m * 0.5;
+  wet.gain.value = m * 1.4;
+}
+function applyVol() { if (ctx) master.gain.value = (volEl.value / 100) ** 2; }
+
+// ---------- Voices ----------
+const voices = {};          // id -> voice
+let transpose = 0;          // semitones (changed by the Random button)
+let octaveShift = -1;       // octaves (independent of Random)
+
+// Sound presets: partials are [frequency multiple, waveform, relative level]
+const INSTRUMENTS = {
+  grand:    { parts:[[1,"triangle",1],[2,"sine",.45],[3,"sine",.2],[4,"sine",.1],[1.003,"sine",.35]],
+              f0:12, f1:3,  fmax0:10000, fmax1:4000,  decBase:6.5, decMin:1.6, att:.006 },
+  bright:   { parts:[[1,"sawtooth",.5],[2,"sine",.5],[3,"sine",.3],[4,"sine",.2],[1.002,"triangle",.4]],
+              f0:16, f1:5,  fmax0:12000, fmax1:6000,  decBase:5.5, decMin:1.4, att:.004 },
+  mellow:   { parts:[[1,"sine",1],[2,"sine",.25],[3,"sine",.08],[1.002,"sine",.3]],
+              f0:6,  f1:2,  fmax0:5000,  fmax1:2000,  decBase:5,   decMin:1.4, att:.01 },
+  electric: { parts:[[1,"sine",1],[2,"sine",.3],[4,"sine",.08],[7,"sine",.05],[1.005,"sine",.25]],
+              f0:8,  f1:4,  fmax0:9000,  fmax1:5000,  decBase:4,   decMin:1.2, att:.004 },
+  honky:    { parts:[[1,"triangle",1],[1.012,"triangle",.8],[.988,"triangle",.6],[2,"sine",.3],[3,"sine",.15]],
+              f0:10, f1:3,  fmax0:9000,  fmax1:4000,  decBase:4,   decMin:1.2, att:.005 },
+  musicbox: { parts:[[1,"sine",1],[4.01,"sine",.25],[6.3,"sine",.1]],
+              f0:20, f1:20, fmax0:14000, fmax1:14000, decBase:2.6, decMin:.8,  att:.002 },
+  // --- synths (these sustain while the key is held) ---
+  pad:      { parts:[[1,"sawtooth",.5],[1.006,"sawtooth",.5],[.994,"sawtooth",.5],[.5,"sine",.4]],
+              f0:4,  f1:2.5, fmax0:3500, fmax1:2500, decBase:6, decMin:2, att:.35, sus:.8, susT:.5, rel:.3 },
+  glass:    { parts:[[1,"sine",1],[2,"sine",.5],[3,"sine",.35],[5,"sine",.15],[1.003,"sine",.5]],
+              f0:10, f1:8,  fmax0:9000, fmax1:8000, decBase:6, decMin:2, att:.25, sus:.85, susT:.4, rel:.4 },
+  lead:     { parts:[[1,"square",.6],[1.004,"square",.4]],
+              f0:6,  f1:4,  fmax0:6000, fmax1:4500, decBase:6, decMin:2, att:.01, sus:.7, susT:.1, rel:.08 },
+  brass:    { parts:[[1,"sawtooth",1],[1.007,"sawtooth",.8]],
+              f0:2,  f1:8,  fmax0:2500, fmax1:7000, fRamp:.2, decBase:6, decMin:2, att:.05, sus:.8, susT:.2, rel:.1 },
+  organ:    { parts:[[1,"sine",1],[2,"sine",.8],[3,"sine",.5],[4,"sine",.3],[.5,"sine",.5]],
+              f0:12, f1:12, fmax0:10000, fmax1:10000, decBase:6, decMin:2, att:.012, sus:1, susT:.02, rel:.05 },
+  pluck:    { parts:[[1,"sawtooth",1],[1.005,"sawtooth",.7]],
+              f0:14, f1:1.5, fmax0:12000, fmax1:3000, fRamp:.35, decBase:1.8, decMin:.6, att:.003 },
+  // --- retro synths ---
+  chip:     { parts:[[1,"square",1]], gain:.55,
+              f0:20, f1:20, fmax0:16000, fmax1:16000, decBase:6, decMin:2, att:.003, sus:.85, susT:.005, rel:.03 },
+  nes:      { parts:[[1,"triangle",1]], gain:.9,
+              f0:20, f1:20, fmax0:16000, fmax1:16000, decBase:6, decMin:2, att:.003, sus:1, susT:.005, rel:.02 },
+  moog:     { parts:[[1,"sawtooth",1],[1.003,"sawtooth",.6],[.5,"square",.6]], q:6, gain:.8,
+              f0:1.5, f1:5, fmax0:1500, fmax1:5000, fRamp:.25, decBase:6, decMin:2, att:.01, sus:.85, susT:.15, rel:.1 },
+  juno:     { parts:[[1,"sawtooth",.6],[1.008,"sawtooth",.6],[.992,"sawtooth",.6],[1,"square",.4],[.5,"square",.4]], gain:.8,
+              f0:5, f1:3, fmax0:4500, fmax1:3000, decBase:6, decMin:2, att:.06, sus:.75, susT:.3, rel:.25 },
+  strings:  { parts:[[1,"sawtooth",.5],[1.01,"sawtooth",.5],[.99,"sawtooth",.5],[2,"sawtooth",.2],[1.005,"sawtooth",.3]], gain:.8,
+              f0:3.5, f1:3, fmax0:3500, fmax1:3000, decBase:6, decMin:2, att:.5, sus:.9, susT:.4, rel:.6 },
+  supersaw: { parts:[[1,"sawtooth",.5],[1.012,"sawtooth",.5],[.988,"sawtooth",.5],[1.025,"sawtooth",.4],[.975,"sawtooth",.4]], gain:.7,
+              f0:8, f1:6, fmax0:9000, fmax1:7000, decBase:6, decMin:2, att:.02, sus:.85, susT:.2, rel:.15 },
+  sync:     { parts:[[1,"sawtooth",1],[1.004,"sawtooth",.5]], q:9, gain:.7,
+              f0:14, f1:3, fmax0:9000, fmax1:2500, fRamp:.5, decBase:6, decMin:2, att:.01, sus:.8, susT:.1, rel:.1 },
+  wobble:   { parts:[[1,"sawtooth",1],[.5,"square",.8],[1.004,"sawtooth",.5]], q:5, gain:.7,
+              f0:3, f1:3, fmax0:2500, fmax1:2500, wob:{ rate:3.5, depth:.85 },
+              decBase:6, decMin:2, att:.01, sus:.9, susT:.05, rel:.1 },
+  vibrato:  { parts:[[1,"triangle",1],[2,"sine",.3],[1.003,"sawtooth",.35]], gain:.9,
+              f0:6, f1:4, fmax0:6000, fmax1:4500, vib:{ rate:5.5, cents:28, delay:.25 },
+              decBase:6, decMin:2, att:.04, sus:.85, susT:.1, rel:.15 }
+};
+let inst = INSTRUMENTS.grand;
+document.getElementById("inst").onchange = e => { inst = INSTRUMENTS[e.target.value]; };
+
+function noteOn(midi, id) {
+  initAudio();
+  if (voices[id]) return;
+  const sounding = midi + transpose + octaveShift * 12;           // transposed pitch; key display stays put
+  const f = 440 * 2 ** ((sounding - 69) / 12);
+  const now = ctx.currentTime;
+
+  const env = ctx.createGain();       // attack/decay
+  const rel = ctx.createGain();       // release
+  const filt = ctx.createBiquadFilter();
+  filt.type = "lowpass";
+  filt.Q.value = 0.5;  // set per sound below
+  const I = inst;
+  filt.Q.value = I.q || 0.5;
+  filt.frequency.setValueAtTime(Math.min(f * I.f0, I.fmax0), now);
+  filt.frequency.exponentialRampToValueAtTime(Math.min(f * I.f1, I.fmax1), now + (I.fRamp || 1.2));
+
+  const dec = Math.max(I.decMin, I.decBase - sounding / 18);
+  env.gain.setValueAtTime(0.0001, now);
+  env.gain.linearRampToValueAtTime(0.55, now + I.att);
+  if (I.sus) env.gain.setTargetAtTime(0.55 * I.sus, now + I.att, I.susT);   // synths hold while the key is down
+  else env.gain.exponentialRampToValueAtTime(0.0001, now + dec);
+
+  // Harmonic partials give a piano-like timbre
+  const parts = I.parts.filter(p => f * p[0] < 18000);
+  const norm = 0.84 / I.parts.reduce((a, p) => a + p[2], 0);   // keeps loudness similar across sounds
+  const oscs = parts.map(([mult, type, amp]) => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.value = f * mult; g.gain.value = amp * norm * (I.gain || 1);
+    o.connect(g).connect(filt); o.start(now);
+    return o;
+  });
+  if (I.vib) {                                   // delayed pitch vibrato
+    const lfo = ctx.createOscillator(), lg = ctx.createGain();
+    lfo.frequency.value = I.vib.rate;
+    lg.gain.setValueAtTime(0, now);
+    lg.gain.linearRampToValueAtTime(I.vib.cents, now + I.vib.delay + 0.4);
+    lfo.connect(lg);
+    oscs.forEach(o => lg.connect(o.detune));
+    lfo.start(now); oscs.push(lfo);
+  }
+  if (I.wob) {                                   // filter wobble
+    const lfo = ctx.createOscillator(), lg = ctx.createGain();
+    lfo.frequency.value = I.wob.rate;
+    lg.gain.value = Math.min(f * I.f1, I.fmax1) * I.wob.depth;
+    lfo.connect(lg).connect(filt.frequency);
+    lfo.start(now); oscs.push(lfo);
+  }
+  filt.connect(env).connect(rel).connect(bus);
+  voices[id] = { oscs, rel, relT: I.rel || 0.12 };
+  setDown(midi, true);
+  voices[id].midi = midi;
+}
+
+function noteOff(id) {
+  const v = voices[id];
+  if (!v) return;
+  setDown(v.midi, false);
+  releaseVoice(id);
+}
+
+function releaseVoice(id) {
+  const v = voices[id];
+  if (!v) return;
+  const t = ctx.currentTime;
+  const rt = v.relT || 0.12;
+  v.rel.gain.setTargetAtTime(0, t, rt);
+  v.oscs.forEach(o => o.stop(t + Math.max(1, rt * 8)));
+  delete voices[id];
+}
+
+// ---------- Keyboard UI ----------
+const kb = document.getElementById("kb");
+const keyEls = {};
+const totalWhite = OCTAVES * 7;
+const ww = 100 / totalWhite;
+
+for (let o = 0; o < OCTAVES; o++) {
+  WHITE.forEach((semi, i) => {
+    const midi = START + o * 12 + semi, idx = o * 7 + i;
+    const el = document.createElement("div");
+    el.className = "key white"; el.dataset.midi = midi;
+    el.style.left = idx * ww + "%"; el.style.width = ww + "%";
+    kb.appendChild(el); keyEls[midi] = el;
+  });
+}
+for (let o = 0; o < OCTAVES; o++) {
+  for (const [i, semi] of Object.entries(BLACK_AFTER)) {
+    const midi = START + o * 12 + semi, idx = o * 7 + Number(i);
+    const bw = ww * 0.6;
+    const el = document.createElement("div");
+    el.className = "key black"; el.dataset.midi = midi;
+    el.style.left = (idx + 1) * ww - bw / 2 + "%"; el.style.width = bw + "%";
+    kb.appendChild(el); keyEls[midi] = el;
+  }
+}
+keyEls[60].classList.add("home");                       // middle C = Do
+keyEls[60].title = "Middle C: home (Do / 1)";
+function setDown(midi, on) { keyEls[midi]?.classList.toggle("down", on); }
+
+// Pointer handling (mouse + touch, with glissando)
+const pointers = {};
+function keyAt(x, y) {
+  const el = document.elementFromPoint(x, y);
+  return el && el.classList.contains("key") ? Number(el.dataset.midi) : null;
+}
+kb.addEventListener("pointerdown", e => {
+  const m = keyAt(e.clientX, e.clientY);
+  if (m == null) return;
+  e.preventDefault();
+  if (selectMode) {                       // choose practice notes (with a short preview)
+    toggleSelect(m);
+    const id = "s" + m; noteOn(m, id); setTimeout(() => noteOff(id), 300);
+    return;
+  }
+  pointers[e.pointerId] = m; noteOn(m, "p" + m);
+});
+kb.addEventListener("pointermove", e => {
+  if (!(e.pointerId in pointers)) return;
+  const m = keyAt(e.clientX, e.clientY), prev = pointers[e.pointerId];
+  if (m != null && m !== prev) {
+    noteOff("p" + prev); pointers[e.pointerId] = m; noteOn(m, "p" + m);
+  }
+});
+function endPointer(e) {
+  if (!(e.pointerId in pointers)) return;
+  noteOff("p" + pointers[e.pointerId]); delete pointers[e.pointerId];
+}
+window.addEventListener("pointerup", endPointer);
+window.addEventListener("pointercancel", endPointer);
+
+// Computer keyboard
+const MAP = "zsxdcvgbhnjmq2w3er5t6y7ui9o0p";
+const held = new Set();
+window.addEventListener("keydown", e => {
+  if (e.repeat || e.ctrlKey || e.metaKey) return;
+  const i = MAP.indexOf(e.key.toLowerCase());
+  if (i < 0 || held.has(i)) return;
+  held.add(i); noteOn(START + i, "k" + i);
+});
+window.addEventListener("keyup", e => {
+  const i = MAP.indexOf(e.key.toLowerCase());
+  if (i < 0) return;
+  held.delete(i); noteOff("k" + i);
+});
+
+// ---------- Controls ----------
+const mixEl = document.getElementById("mix"), sizeEl = document.getElementById("size"),
+      volEl = document.getElementById("vol");
+mixEl.oninput = applyMix;
+volEl.oninput = applyVol;
+sizeEl.onchange = () => { if (ctx) makeReverb(parseFloat(sizeEl.value)); };
+
+// Transpose (affects notes played from now on; held notes keep their pitch)
+const trVal = document.getElementById("trVal");
+function setTranspose(n) {
+  transpose = Math.max(-24, Math.min(24, n));
+  trVal.textContent = (transpose > 0 ? "+" : "") + transpose + " st";
+}
+document.getElementById("trDn").onclick = () => setTranspose(transpose - 1);
+document.getElementById("trUp").onclick = () => setTranspose(transpose + 1);
+document.getElementById("trRst").onclick = () => setTranspose(0);
+
+// Octave shift: separate from semitone transpose, so Random and Reset never change it
+const octVal = document.getElementById("octVal");
+function setOctave(n) {
+  octaveShift = Math.max(-2, Math.min(2, n));
+  octVal.textContent = (octaveShift > 0 ? "+" : "") + octaveShift;
+}
+document.getElementById("octDn").onclick = () => setOctave(octaveShift - 1);
+document.getElementById("octUp").onclick = () => setOctave(octaveShift + 1);
+setOctave(octaveShift);
+document.getElementById("trRnd").onclick = () => {
+  let n;
+  do { n = Math.floor(Math.random() * 25) - 12; } while (n === transpose);   // -12..+12, always a change
+  setTranspose(n);
+};
+
+// ---------- Sight-singing trainer ----------
+let selectMode = false, playing = false, timer = null, lastTarget = null;
+let soundTimer = null, offTimer = null, soundId = null;
+const delayEl = document.getElementById("delay");
+const selected = new Set();
+const selBtn = document.getElementById("selBtn"), clrBtn = document.getElementById("clrBtn"),
+      playBtn = document.getElementById("playBtn"), bpmEl = document.getElementById("bpm"),
+      bpmVal = document.getElementById("bpmVal"), sndEl = document.getElementById("snd"),
+      statusEl = document.getElementById("status");
+
+function updateStatus(msg) {
+  const n = selected.size, txt = n + (n === 1 ? " note" : " notes") + " selected";
+  statusEl.textContent = msg || (playing ? "Playing… " + txt
+                          : selectMode ? txt + " – click keys to add or remove" : txt);
+}
+function toggleSelect(m) {
+  selected.has(m) ? selected.delete(m) : selected.add(m);
+  keyEls[m].classList.toggle("sel", selected.has(m));
+  updateStatus();
+}
+function setSelectMode(on) {
+  selectMode = on;
+  selBtn.classList.toggle("on", on);
+  selBtn.textContent = on ? "Select: on" : "Select";
+  updateStatus();
+}
+selBtn.onclick = () => setSelectMode(!selectMode);
+clrBtn.onclick = () => {
+  selected.forEach(m => keyEls[m].classList.remove("sel"));
+  selected.clear(); updateStatus();
+};
+// Logarithmic tempo: slider 0..1000 maps to 10..100 BPM (each slider tenth = equal tempo ratio)
+function getBpm() { return Math.round(10 * Math.pow(10, bpmEl.value / 1000)); }
+bpmEl.oninput = () => { bpmVal.textContent = getBpm() + " BPM"; };
+bpmEl.oninput();
+
+function step() {
+  const pool = [...selected];
+  if (!pool.length) { stopTrainer(); return; }
+  let m;
+  do { m = pool[Math.floor(Math.random() * pool.length)]; }
+  while (pool.length > 1 && m === lastTarget);          // avoid immediate repeats
+  if (lastTarget != null) keyEls[lastTarget].classList.remove("target");
+  lastTarget = m; keyEls[m].classList.add("target");
+  if (revealEl.checked) setLadderTarget(((m - 60) % 12 + 12) % 12);
+  const beat = 60000 / getBpm();
+  clearTimeout(soundTimer); clearTimeout(offTimer);
+  if (soundId) noteOff(soundId);
+  if (sndEl.checked) {
+    const delay = beat * parseFloat(delayEl.value);      // fraction of a beat, in ms
+    const id = soundId = "t" + m;
+    const playIt = () => {
+      noteOn(m, id);
+      offTimer = setTimeout(() => noteOff(id), Math.min((beat - delay) * 0.9, 1500));
+    };
+    if (delay > 0) soundTimer = setTimeout(playIt, delay); else playIt();
+  }
+  timer = setTimeout(step, beat);
+}
+function startTrainer() {
+  if (!selected.size) { updateStatus("Select at least one note first"); return; }
+  setSelectMode(false);
+  playing = true;
+  playBtn.textContent = "Stop"; playBtn.classList.add("on");
+  selBtn.disabled = clrBtn.disabled = true;
+  updateStatus(); step();
+}
+sndEl.onchange = () => { delayEl.disabled = !sndEl.checked; };
+function stopTrainer() {
+  clearTimeout(timer); clearTimeout(soundTimer); clearTimeout(offTimer);
+  if (soundId) { noteOff(soundId); soundId = null; }
+  playing = false;
+  if (lastTarget != null) keyEls[lastTarget].classList.remove("target");
+  lastTarget = null;
+  setLadderTarget(-1);
+  playBtn.textContent = "Play"; playBtn.classList.remove("on");
+  selBtn.disabled = clrBtn.disabled = false;
+  updateStatus();
+}
+playBtn.onclick = () => playing ? stopTrainer() : startTrainer();
+
+// ---------- Solfege ladder (middle C = Do = 1) ----------
+const LADDER = [   // [degree, solfege, key name, in major scale?]
+  ["1","Do","C",1],       ["♭2","Ra · Di","C♯/D♭",0], ["2","Re","D",1],      ["♭3","Me · Ri","D♯/E♭",0],
+  ["3","Mi","E",1],       ["4","Fa","F",1],           ["♯4","Fi · Se","F♯/G♭",0], ["5","Sol","G",1],
+  ["♭6","Le · Si","G♯/A♭",0], ["6","La","A",1],       ["♭7","Te · Li","A♯/B♭",0], ["7","Ti","B",1]
+];
+const ladderEl = document.getElementById("ladder"), revealEl = document.getElementById("reveal"), rowEls = [];
+for (let i = 11; i >= 0; i--) {                             // highest tone at the top
+  const [deg, sol, key, dia] = LADDER[i];
+  const b = document.createElement("button");
+  b.className = "lrow " + (dia ? "dia" : "chr");
+  b.innerHTML = "<span>" + deg + "</span><span>" + sol + "</span><span>" + key + "</span>";
+  const id = "l" + i, midi = 60 + i;
+  const up = () => { b.classList.remove("down"); noteOff(id); };
+  b.onpointerdown = e => {
+    e.preventDefault();
+    try { b.setPointerCapture(e.pointerId); } catch (_) {}
+    b.classList.add("down"); noteOn(midi, id);
+  };
+  b.onpointerup = up; b.onpointercancel = up;
+  rowEls[i] = b; ladderEl.appendChild(b);
+}
+function setLadderTarget(i) { rowEls.forEach((r, j) => r.classList.toggle("target", j === i)); }
+revealEl.onchange = () => {
+  if (!revealEl.checked) setLadderTarget(-1);
+  else if (lastTarget != null) setLadderTarget(((lastTarget - 60) % 12 + 12) % 12);
+};
+</script>
+</body>
+</html>
