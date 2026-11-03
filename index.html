@@ -91,6 +91,7 @@
       <select id="inst">
         <optgroup label="Pianos">
           <option value="grand">Grand piano</option>
+          <option value="grand2">Grand piano (brighter)</option>
           <option value="bright">Bright piano</option>
           <option value="mellow">Mellow piano</option>
           <option value="electric">Electric piano</option>
@@ -270,6 +271,11 @@ let octaveShift = -1;       // octaves (independent of Random)
 const INSTRUMENTS = {
   grand:    { parts:[[1,"triangle",1],[2,"sine",.45],[3,"sine",.2],[4,"sine",.1],[1.003,"sine",.35]],
               f0:12, f1:3,  fmax0:10000, fmax1:4000,  decBase:6.5, decMin:1.6, att:.006 },
+  // Same family of timbre as "grand", but with more upper partials and a filter that never closes below a
+  // floor (fmin0/fmin1), so low notes stay bright instead of going dark.
+  grand2:   { parts:[[1,"triangle",1],[2,"sine",.55],[3,"sine",.3],[4,"sine",.16],[5,"sine",.08],[6,"sine",.04],
+                     [1.003,"sine",.35]], gain:.9,
+              f0:16, f1:5, fmax0:12000, fmax1:7000, fmin0:3500, fmin1:1500, decBase:6.5, decMin:1.6, att:.005 },
   bright:   { parts:[[1,"sawtooth",.5],[2,"sine",.5],[3,"sine",.3],[4,"sine",.2],[1.002,"triangle",.4]],
               f0:16, f1:5,  fmax0:12000, fmax1:6000,  decBase:5.5, decMin:1.4, att:.004 },
   mellow:   { parts:[[1,"sine",1],[2,"sine",.25],[3,"sine",.08],[1.002,"sine",.3]],
@@ -332,8 +338,8 @@ function noteOn(midi, id) {
   filt.Q.value = 0.5;  // set per sound below
   const I = inst;
   filt.Q.value = I.q || 0.5;
-  filt.frequency.setValueAtTime(Math.min(f * I.f0, I.fmax0), now);
-  filt.frequency.exponentialRampToValueAtTime(Math.min(f * I.f1, I.fmax1), now + (I.fRamp || 1.2));
+  filt.frequency.setValueAtTime(Math.max(Math.min(f * I.f0, I.fmax0), I.fmin0 || 0), now);
+  filt.frequency.exponentialRampToValueAtTime(Math.max(Math.min(f * I.f1, I.fmax1), I.fmin1 || 0), now + (I.fRamp || 1.2));
 
   const dec = Math.max(I.decMin, I.decBase - sounding / 18);
   env.gain.setValueAtTime(0.0001, now);

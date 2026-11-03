@@ -18,12 +18,12 @@ It works offline and has no dependencies.
 - Computer-keyboard play: the `Z`–`M` and `Q`–`U` rows play upward from C3. `S D G H J` and `2 3 5 6 7` are the black keys.
 - Middle C is marked **Do** on the keyboard.
 
-### Sounds (21)
+### Sounds (22)
 Choose from the **Sound** menu. Piano sounds decay naturally; synth and retro sounds hold while the key is down and fade on release.
 
 | Group | Sounds |
 |---|---|
-| Pianos | Grand piano, Bright piano, Mellow piano, Electric piano, Honky-tonk, Music box |
+| Pianos | Grand piano, Grand piano (brighter), Bright piano, Mellow piano, Electric piano, Honky-tonk, Music box |
 | Synths | Warm pad, Glass pad, Square lead, Synth brass, Organ, Synth pluck, Vibrato lead |
 | Retro synths | Chiptune square, 8-bit triangle, Moog-style lead, 80s poly synth, String machine, Supersaw, Sync-style lead, Wobble bass |
 
