@@ -163,6 +163,19 @@
     <span id="status">0 notes selected</span>
   </div>
 
+  <div class="controls" id="dronePanel">
+    <button id="droneBtn" title="Hold a steady Do under the notes">Drone: off</button>
+    <label>Drone octave
+      <select id="droneOct">
+        <option value="36">Low (C2)</option>
+        <option value="48" selected>Middle (C3)</option>
+        <option value="60">High (C4)</option>
+      </select>
+    </label>
+    <label>Drone sound <select id="droneInst"></select></label>
+    <label>Drone level <input id="droneVol" type="range" min="0" max="100" value="50"></label>
+  </div>
+
   <div class="wrap"><div class="keyboard"><div class="inner" id="kb"></div></div></div>
 
   <div class="lower">
@@ -208,6 +221,9 @@
       <li>Use the <b>Solfege ladder</b> to find the name of any of the 12 chromatic tones. Hold a row to hear the pitch, and tick “Show the lit note on the ladder” when you want to check your answer.</li>
     </ul>
 
+    <h3>Drone</h3>
+    <p>Press <b>Drone</b> to hold a steady Do (the note C) while you sing. Choose its octave, pick any sustaining sound and set its level. The drone follows <b>Transpose</b>, so it always stays on your Do, but it ignores the <b>Octave</b> setting, which only moves the keys. Singing against a drone makes it much easier to hear whether you are in tune with home. A quiet, pure sound such as Organ, Glass pad or 8-bit triangle works well.</p>
+
     <h3>Tips</h3>
     <p>Start with two or three notes at a slow tempo and a long delay, then add notes and speed up. Use
     <b>Random</b> transpose to practise relative pitch: the shapes stay the same but the notes you hear change.
@@ -220,7 +236,7 @@ const START = 48;            // C3
 const OCTAVES = 3;
 const WHITE = [0,2,4,5,7,9,11];
 const BLACK_AFTER = {0:1, 1:3, 3:6, 4:8, 5:10};   // white index in octave -> semitone offset
-let ctx, bus, dry, wet, convolver, master;
+let ctx, bus, dry, wet, convolver, master, droneGain;
 
 // ---------- Audio setup ----------
 function initAudio() {
@@ -238,7 +254,8 @@ function initAudio() {
   bus.connect(convolver).connect(wet).connect(master);
 
   makeReverb(parseFloat(sizeEl.value));
-  applyMix(); applyVol();
+  droneGain = ctx.createGain(); droneGain.connect(bus);
+  applyMix(); applyVol(); applyDroneLevel();
 }
 
 // Generate a stereo impulse response: decaying noise, progressively darkened
@@ -329,10 +346,10 @@ const INSTRUMENTS = {
 let inst = INSTRUMENTS.grand;
 document.getElementById("inst").onchange = e => { inst = INSTRUMENTS[e.target.value]; };
 
-function noteOn(midi, id) {
+function noteOn(midi, id, o = {}) {      // o: optional { inst, sounding, dest } (used by the drone)
   initAudio();
   if (voices[id]) return;
-  const sounding = midi + transpose + octaveShift * 12;           // transposed pitch; key display stays put
+  const sounding = o.sounding != null ? o.sounding : midi + transpose + octaveShift * 12;           // transposed pitch; key display stays put
   const f = 440 * 2 ** ((sounding - 69) / 12);
   const now = ctx.currentTime;
 
@@ -341,7 +358,7 @@ function noteOn(midi, id) {
   const filt = ctx.createBiquadFilter();
   filt.type = "lowpass";
   filt.Q.value = 0.5;  // set per sound below
-  const I = inst;
+  const I = o.inst || inst;
   filt.Q.value = I.q || 0.5;
   filt.frequency.setValueAtTime(Math.max(Math.min(f * I.f0, I.fmax0), I.fmin0 || 0), now);
   filt.frequency.exponentialRampToValueAtTime(Math.max(Math.min(f * I.f1, I.fmax1), I.fmin1 || 0), now + (I.fRamp || 1.2));
@@ -377,7 +394,7 @@ function noteOn(midi, id) {
     lfo.connect(lg).connect(filt.frequency);
     lfo.start(now); oscs.push(lfo);
   }
-  filt.connect(env).connect(rel).connect(bus);
+  filt.connect(env).connect(rel).connect(o.dest || bus);
   voices[id] = { oscs, rel, relT: I.rel || 0.12 };
   setDown(midi, true);
   voices[id].midi = midi;
@@ -487,6 +504,7 @@ const trVal = document.getElementById("trVal");
 function setTranspose(n) {
   transpose = Math.max(-24, Math.min(24, n));
   trVal.textContent = (transpose > 0 ? "+" : "") + transpose + " st";
+  if (droneOn) restartDrone();            // keep the drone on Do
 }
 document.getElementById("trDn").onclick = () => setTranspose(transpose - 1);
 document.getElementById("trUp").onclick = () => setTranspose(transpose + 1);
@@ -621,6 +639,36 @@ revealEl.onchange = () => {
   if (!revealEl.checked) setLadderTarget(-1);
   else if (lastTarget != null) setLadderTarget(((lastTarget - 60) % 12 + 12) % 12);
 };
+// ---------- Drone (a sustained Do) ----------
+let droneOn = false;
+const droneBtn = document.getElementById("droneBtn"), droneOctEl = document.getElementById("droneOct"),
+      droneInstEl = document.getElementById("droneInst"), droneVolEl = document.getElementById("droneVol");
+
+// Offer only the sounds that sustain, reusing the main Sound menu's groups and names
+document.querySelectorAll("#inst optgroup").forEach(g => {
+  const opts = [...g.querySelectorAll("option")].filter(o => INSTRUMENTS[o.value].sus);
+  if (!opts.length) return;
+  const og = document.createElement("optgroup"); og.label = g.label;
+  opts.forEach(o => og.appendChild(new Option(o.textContent, o.value)));
+  droneInstEl.appendChild(og);
+});
+droneInstEl.value = "pad";
+
+function applyDroneLevel() { if (droneGain) droneGain.gain.value = droneVolEl.value / 100; }
+function startDrone() {
+  initAudio();
+  // Do = C in the chosen octave, shifted by Transpose (so it stays on Do), but not by the keyboard Octave setting
+  noteOn(null, "drone", { inst: INSTRUMENTS[droneInstEl.value], sounding: parseInt(droneOctEl.value) + transpose, dest: droneGain });
+}
+function restartDrone() { if (droneOn) { noteOff("drone"); startDrone(); } }
+droneBtn.onclick = () => {
+  droneOn = !droneOn;
+  droneBtn.classList.toggle("on", droneOn);
+  droneBtn.textContent = "Drone: " + (droneOn ? "on" : "off");
+  if (droneOn) startDrone(); else noteOff("drone");
+};
+droneOctEl.onchange = droneInstEl.onchange = restartDrone;
+droneVolEl.oninput = applyDroneLevel;
 </script>
 </body>
 </html>

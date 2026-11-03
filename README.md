@@ -38,6 +38,12 @@ Choose from the **Sound** menu. Piano sounds decay naturally; synth and retro so
 - **Octave** shifts by whole octaves, from −2 to +2 (default −1). It is separate from Transpose, so Random and Reset never change it.
 - The keys on screen never move; only the sounding pitch changes, and only for notes played afterwards.
 
+### Drone
+- **Drone** holds a sustained Do (the note C) so you can sing against a steady reference. Choose its octave (C2, C3 or C4), its sound and its level.
+- Any sustaining sound can be used (pads, leads, organ, 8-bit and the other synths); the piano sounds are not offered because they decay.
+- The drone follows **Transpose**, so it always stays on your Do, but it ignores the keyboard **Octave** setting.
+- It goes through the same reverb as the notes.
+
 ### Sight-singing trainer
 1. Press **Select** and click the keys you want to practise. Each gets a blue dot, and you hear a short preview. Click again to remove a note, or press **Clear**.
 2. Set the **Tempo** from 10 to 100 BPM (default 20). The slider is logarithmic, so the slow end is finely adjustable.
