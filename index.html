@@ -69,7 +69,8 @@
                     margin-left:-6px; border-radius:50%; background:#2f7de1; box-shadow:0 0 0 2px rgba(255,255,255,.7); }
   .black.sel::after { bottom:8px; }
   button:disabled, select:disabled { opacity:.4; cursor:default; }
-  select { background:var(--bg); color:var(--fg); border:1px solid var(--accent); border-radius:8px;
+  input[type=number] { width:5em; }
+  select, input[type=number] { background:var(--bg); color:var(--fg); border:1px solid var(--accent); border-radius:8px;
            padding:6px 8px; font-size:.85rem; }
   #status { font-size:.8rem; min-width:14em; opacity:.85; }
   .tr { display:flex; align-items:center; gap:6px; }
@@ -154,6 +155,10 @@
         <option value="0.75" selected>3/4 beat</option>
       </select>
     </label>
+    <label>Max leap (semitones)
+      <input id="leap" type="number" min="1" max="35" step="1" value="12"
+             title="Largest jump allowed between one note and the next">
+    </label>
     <button id="playBtn">Play</button>
     <span id="status">0 notes selected</span>
   </div>
@@ -192,7 +197,7 @@
     <ol>
       <li>Press <b>Select</b> and click the notes you want to practise. They get blue dots (you hear a short preview). Click again to remove one, or press <b>Clear</b>.</li>
       <li>Set the <b>Tempo</b> (10–100 BPM; the slider is logarithmic, so the slow end is finely adjustable).</li>
-      <li>Press <b>Play</b>. On every beat a random selected note lights up green and stays lit until the next beat. The same note never appears twice in a row. Press <b>Stop</b> to end.</li>
+      <li>Press <b>Play</b>. On every beat a random selected note lights up green and stays lit until the next beat. The same note never appears twice in a row, and no jump is larger than the <b>Max leap</b> (default 12 semitones, one octave; if no other selected note is within reach, the same note repeats and the status line says so). Press <b>Stop</b> to end.</li>
       <li><b>Play sound</b> lets you hear the note too. <b>Sound delay</b> sets how long after the light it sounds, as a fraction of a beat, so you can sing first and then check yourself. Turn Play sound off to train from sight alone.</li>
     </ol>
 
@@ -505,7 +510,7 @@ document.getElementById("trRnd").onclick = () => {
 // ---------- Sight-singing trainer ----------
 let selectMode = false, playing = false, timer = null, lastTarget = null;
 let soundTimer = null, offTimer = null, soundId = null;
-const delayEl = document.getElementById("delay");
+const delayEl = document.getElementById("delay"), leapEl = document.getElementById("leap");
 const selected = new Set();
 const selBtn = document.getElementById("selBtn"), clrBtn = document.getElementById("clrBtn"),
       playBtn = document.getElementById("playBtn"), bpmEl = document.getElementById("bpm"),
@@ -541,9 +546,14 @@ bpmEl.oninput();
 function step() {
   const pool = [...selected];
   if (!pool.length) { stopTrainer(); return; }
-  let m;
-  do { m = pool[Math.floor(Math.random() * pool.length)]; }
-  while (pool.length > 1 && m === lastTarget);          // avoid immediate repeats
+  // Next note: any selected note except the last one, no further away than the max leap
+  const maxLeap = Math.max(1, Math.min(35, parseInt(leapEl.value) || 12));
+  let cands = lastTarget == null ? pool
+            : pool.filter(n => n !== lastTarget && Math.abs(n - lastTarget) <= maxLeap);
+  let stuck = false;
+  if (!cands.length) { cands = [lastTarget]; stuck = pool.length > 1; }   // nothing within reach: repeat
+  const m = cands[Math.floor(Math.random() * cands.length)];
+  updateStatus(stuck ? "Playing… no other selected note is within the max leap" : undefined);
   if (lastTarget != null) keyEls[lastTarget].classList.remove("target");
   lastTarget = m; keyEls[m].classList.add("target");
   if (revealEl.checked) setLadderTarget(((m - 60) % 12 + 12) % 12);
@@ -570,6 +580,7 @@ function startTrainer() {
   updateStatus(); step();
 }
 sndEl.onchange = () => { delayEl.disabled = !sndEl.checked; };
+leapEl.onchange = () => { leapEl.value = Math.max(1, Math.min(35, parseInt(leapEl.value) || 12)); };
 function stopTrainer() {
   clearTimeout(timer); clearTimeout(soundTimer); clearTimeout(offTimer);
   if (soundId) { noteOff(soundId); soundId = null; }
