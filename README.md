@@ -4,7 +4,7 @@ A single-file, browser-based synth piano with a built-in sight-singing trainer. 
 
 ## Getting started
 
-1. Save `piano.html` anywhere on your computer, or go to [https://bustad.github.io/synth-piano/](https://bustad.github.io/synth-piano/).
+1. Save `piano.html` anywhere on your computer.
 2. Open it in a modern desktop or mobile browser (it uses the Web Audio API, which current versions of Chrome, Edge, Firefox and Safari support).
 3. Click or tap a key. Browsers only allow audio after a user gesture, so sound starts on your first interaction.
 
@@ -37,6 +37,12 @@ Choose from the **Sound** menu. Piano sounds decay naturally; synth and retro so
 - **Transpose** shifts the pitch by semitones, from −24 to +24. **Random** picks a new shift between −12 and +12 (always different from the current one), and **Reset** returns to 0.
 - **Octave** shifts by whole octaves, from −2 to +2 (default −1). It is separate from Transpose, so Random and Reset never change it.
 - The keys on screen never move; only the sounding pitch changes, and only for notes played afterwards.
+
+### Saved settings
+- Your settings are remembered automatically between visits using the browser's local storage: sound, reverb mix, room size, volume, transpose, octave, the selected practice notes, tempo, Play sound, sound delay, max leap, the "show the lit note" option, and the drone's octave, sound and level.
+- The drone and the trainer always start switched off.
+- **Reset all settings** (at the bottom of the page) clears the saved settings and restores the defaults.
+- Settings are stored per browser and per file location, so opening the file from a different folder or browser starts fresh, and clearing your browser data erases them. If the browser blocks storage (for example in a private window, or inside some preview panes), the page still works but says that settings can't be saved.
 
 ### Drone
 - **Drone** holds a sustained Do (the note C) so you can sing against a steady reference. Choose its octave (C2, C3 or C4), its sound and its level.

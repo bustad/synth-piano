@@ -45,6 +45,8 @@
   .lrow.down { background:var(--accent); color:#fff; }
   .lrow.target { background:#6fd68a; color:#0b3b1b; border-color:#2fa85a; opacity:1; }
   .reveal { flex-direction:row; align-items:center; gap:6px; margin-top:12px; }
+  .memory { margin:0; font-size:.8rem; opacity:.85; text-align:center; }
+  .memory button { padding:4px 10px; font-size:.8rem; margin-left:6px; }
   kbd { background:var(--bg); border:1px solid var(--accent); border-radius:4px; padding:0 5px; font-size:.85em; }
   .controls { display:flex; flex-wrap:wrap; gap:20px; align-items:center; justify-content:center;
               background:var(--panel); padding:12px 20px; border-radius:12px; }
@@ -224,6 +226,9 @@
     <h3>Drone</h3>
     <p>Press <b>Drone</b> to hold a steady Do (the note C) while you sing. Choose its octave, pick any sustaining sound and set its level. The drone follows <b>Transpose</b>, so it always stays on your Do, but it ignores the <b>Octave</b> setting, which only moves the keys. Singing against a drone makes it much easier to hear whether you are in tune with home. A quiet, pure sound such as Organ, Glass pad or 8-bit triangle works well.</p>
 
+    <h3>Saved settings</h3>
+    <p>Your settings (sound, reverb, volume, transpose, octave, selected notes, tempo, delay, max leap and the drone options) are remembered automatically in this browser and come back the next time you open the page. The drone and the trainer always start switched off. <b>Reset all settings</b> at the bottom clears the memory and restores the defaults.</p>
+
     <h3>Tips</h3>
     <p>Start with two or three notes at a slow tempo and a long delay, then add notes and speed up. Use
     <b>Random</b> transpose to practise relative pitch: the shapes stay the same but the notes you hear change.
@@ -231,12 +236,16 @@
   </details>
   </div>
 
+  <p class="memory"><span id="memStatus"></span> <button id="resetBtn">Reset all settings</button></p>
+
 <script>
 const START = 48;            // C3
 const OCTAVES = 3;
 const WHITE = [0,2,4,5,7,9,11];
 const BLACK_AFTER = {0:1, 1:3, 3:6, 4:8, 5:10};   // white index in octave -> semitone offset
 let ctx, bus, dry, wet, convolver, master, droneGain;
+const STORE_KEY = "synthPianoSightSinging.v1";
+let loadingSettings = true;   // suppress saving while settings are being restored
 
 // ---------- Audio setup ----------
 function initAudio() {
@@ -505,6 +514,7 @@ function setTranspose(n) {
   transpose = Math.max(-24, Math.min(24, n));
   trVal.textContent = (transpose > 0 ? "+" : "") + transpose + " st";
   if (droneOn) restartDrone();            // keep the drone on Do
+  saveSettings();
 }
 document.getElementById("trDn").onclick = () => setTranspose(transpose - 1);
 document.getElementById("trUp").onclick = () => setTranspose(transpose + 1);
@@ -515,6 +525,7 @@ const octVal = document.getElementById("octVal");
 function setOctave(n) {
   octaveShift = Math.max(-2, Math.min(2, n));
   octVal.textContent = (octaveShift > 0 ? "+" : "") + octaveShift;
+  saveSettings();
 }
 document.getElementById("octDn").onclick = () => setOctave(octaveShift - 1);
 document.getElementById("octUp").onclick = () => setOctave(octaveShift + 1);
@@ -544,6 +555,7 @@ function toggleSelect(m) {
   selected.has(m) ? selected.delete(m) : selected.add(m);
   keyEls[m].classList.toggle("sel", selected.has(m));
   updateStatus();
+  saveSettings();
 }
 function setSelectMode(on) {
   selectMode = on;
@@ -554,7 +566,7 @@ function setSelectMode(on) {
 selBtn.onclick = () => setSelectMode(!selectMode);
 clrBtn.onclick = () => {
   selected.forEach(m => keyEls[m].classList.remove("sel"));
-  selected.clear(); updateStatus();
+  selected.clear(); updateStatus(); saveSettings();
 };
 // Logarithmic tempo: slider 0..1000 maps to 10..100 BPM (each slider tenth = equal tempo ratio)
 function getBpm() { return Math.round(10 * Math.pow(10, bpmEl.value / 1000)); }
@@ -669,6 +681,54 @@ droneBtn.onclick = () => {
 };
 droneOctEl.onchange = droneInstEl.onchange = restartDrone;
 droneVolEl.oninput = applyDroneLevel;
+// ---------- Memory: settings are remembered between visits (browser localStorage) ----------
+function saveSettings() {
+  if (loadingSettings) return;
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({
+      mix: mixEl.value, size: sizeEl.value, vol: volEl.value, inst: document.getElementById("inst").value,
+      transpose, octave: octaveShift,
+      selected: [...selected], bpm: bpmEl.value, snd: sndEl.checked, delay: delayEl.value,
+      leap: leapEl.value, reveal: revealEl.checked,
+      droneOct: droneOctEl.value, droneInst: droneInstEl.value, droneVol: droneVolEl.value
+    }));
+  } catch (_) { /* storage unavailable: carry on without saving */ }
+}
+document.addEventListener("input", saveSettings);
+document.addEventListener("change", saveSettings);
+
+function setSel(el, v) { if (v != null && [...el.options].some(o => o.value === String(v))) el.value = v; }
+function setNum(el, v, lo, hi) { v = Number(v); if (v === v && v !== Infinity && v !== -Infinity) el.value = Math.max(lo, Math.min(hi, v)); }
+
+(function loadSettings() {
+  let d = null;
+  try { d = JSON.parse(localStorage.getItem(STORE_KEY)); } catch (_) {}
+  if (d && typeof d === "object") {
+    setNum(mixEl, d.mix, 0, 100); setNum(sizeEl, d.size, 0.5, 6); setNum(volEl, d.vol, 0, 100);
+    const instSel = document.getElementById("inst");
+    setSel(instSel, d.inst); inst = INSTRUMENTS[instSel.value] || inst;
+    if (typeof d.transpose === "number") setTranspose(d.transpose);
+    if (typeof d.octave === "number") setOctave(d.octave);
+    if (Array.isArray(d.selected)) d.selected.forEach(m => { if (keyEls[m] && !selected.has(m)) toggleSelect(m); });
+    setNum(bpmEl, d.bpm, 0, 1000); bpmEl.oninput();
+    if (typeof d.snd === "boolean") sndEl.checked = d.snd;
+    sndEl.onchange();
+    setSel(delayEl, d.delay); setNum(leapEl, d.leap, 1, 35);
+    if (typeof d.reveal === "boolean") revealEl.checked = d.reveal;
+    setSel(droneOctEl, d.droneOct); setSel(droneInstEl, d.droneInst); setNum(droneVolEl, d.droneVol, 0, 100);
+  }
+  loadingSettings = false;
+
+  let ok = true;
+  try { localStorage.setItem(STORE_KEY + ".test", "1"); localStorage.removeItem(STORE_KEY + ".test"); } catch (_) { ok = false; }
+  document.getElementById("memStatus").textContent = ok
+    ? "Settings are saved automatically in this browser."
+    : "Settings can't be saved here (browser storage is unavailable).";
+})();
+document.getElementById("resetBtn").onclick = () => {
+  try { localStorage.removeItem(STORE_KEY); } catch (_) {}
+  location.reload();
+};
 </script>
 </body>
 </html>
