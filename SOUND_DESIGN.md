@@ -1,6 +1,6 @@
 # Sound design: how every sound is built
 
-This document explains exactly how each of the 22 sounds in `piano.html` is generated. Everything is made in real time with the Web Audio API from oscillators, gains and one filter per note. There are no samples, no audio files and no libraries.
+This document explains exactly how each of the 22 sounds in `index.html` is generated. Everything is made in real time with the Web Audio API from oscillators, gains and one filter per note. There are no samples, no audio files and no libraries.
 
 The numbers below were chosen from common synthesis practice, not measured from real instruments, so treat the sounds as approximations in the style of the instrument they are named after.
 

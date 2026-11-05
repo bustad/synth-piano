@@ -4,7 +4,7 @@ A single-file, browser-based synth piano with a built-in sight-singing trainer. 
 
 ## Getting started
 
-1. Save `piano.html` anywhere on your computer.
+1. Save `index.html` anywhere on your computer, or go to [https://bustad.github.io/synth-piano/](https://bustad.github.io/synth-piano/).
 2. Open it in a modern desktop or mobile browser (it uses the Web Audio API, which current versions of Chrome, Edge, Firefox and Safari support).
 3. Click or tap a key. Browsers only allow audio after a user gesture, so sound starts on your first interaction.
 
