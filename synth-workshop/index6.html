@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Threshold</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent: #5ad7ff;
+    --ink:    #05070b;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+
+  body {
+    overflow: hidden;
+    color: #fff;
+    font-family: "Sora", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    /* shown instantly, and stays as the backdrop if 3D can't start */
+    background:
+      radial-gradient(90% 70% at 72% 105%, rgba(90,215,255,.18) 0%, rgba(90,215,255,0) 60%),
+      radial-gradient(120% 90% at 70% 100%, #10243a 0%, #070b14 55%, #04060a 100%);
+  }
+
+  /* ---------- 3D layer ---------- */
+  #stage {
+    position: fixed; inset: 0;
+    opacity: 0;
+    transition: opacity 1.8s ease;
+  }
+  #stage.ready { opacity: 1; }
+  #stage canvas { display: block; width: 100%; height: 100%; }
+
+  /* reading scrim: keeps the type legible over the scene */
+  .scrim {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    background: linear-gradient(90deg, rgba(3,5,9,.9) 0%, rgba(3,5,9,.55) 30%, rgba(3,5,9,0) 62%);
+  }
+
+  /* ---------- wordmark ---------- */
+  .brand {
+    position: fixed;
+    top: 32px; left: clamp(24px, 5vw, 72px);
+    display: flex; align-items: center; gap: 14px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .38em;
+  }
+  .brand i {
+    position: relative;
+    width: 22px; height: 22px;
+    border: 1.5px solid rgba(255,255,255,.9);
+    border-radius: 50%;
+  }
+  .brand i::after {
+    content: "";
+    position: absolute; inset: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
+  }
+
+  /* ---------- menu ---------- */
+  .menu {
+    position: fixed;
+    left: clamp(24px, 5vw, 72px);
+    top: 50%;
+    transform: translateY(-50%);
+    max-width: min(560px, 90vw);
+  }
+  .cap {
+    margin: 0 0 22px;
+    font-size: 13px;
+    letter-spacing: .06em;
+    color: rgba(255,255,255,.5);
+  }
+  .menu ul { list-style: none; margin: 0; padding: 0; }
+
+  .menu a {
+    position: relative;
+    display: block;
+    padding: 8px 0;
+    font-size: clamp(28px, 4.2vw, 50px);
+    font-weight: 300;
+    line-height: 1.1;
+    color: rgba(255,255,255,.42);
+    text-decoration: none;
+    outline: none;
+    transition: color .25s ease, transform .4s cubic-bezier(.2,.8,.2,1);
+  }
+  .menu a::before {
+    content: "";
+    position: absolute;
+    left: -30px; top: 50%;
+    width: 0; height: 2px;
+    margin-top: -1px;
+    background: var(--accent);
+    box-shadow: 0 0 14px var(--accent);
+    transition: width .4s cubic-bezier(.2,.8,.2,1);
+  }
+  .menu a.is-active { color: #fff; transform: translateX(32px); }
+  .menu a.is-active::before { width: 20px; }
+  .menu a:focus-visible { outline: 1px solid rgba(255,255,255,.45); outline-offset: 6px; border-radius: 2px; }
+
+  .note {
+    display: block;
+    max-height: 0;
+    margin-top: 0;
+    overflow: hidden;
+    opacity: 0;
+    font-size: 14px;
+    font-weight: 400;
+    letter-spacing: .01em;
+    color: rgba(255,255,255,.65);
+    transition: max-height .4s ease, opacity .4s ease, margin .4s ease;
+  }
+  .menu a.is-active .note { max-height: 2.4em; margin-top: 6px; opacity: 1; }
+
+  /* ---------- control prompts ---------- */
+  .keys {
+    position: fixed;
+    right: clamp(24px, 4vw, 56px); bottom: 30px;
+    display: flex; gap: 26px;
+    font-size: 12px;
+    color: rgba(255,255,255,.6);
+  }
+  .keys span { display: inline-flex; align-items: center; gap: 10px; }
+  .key {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 26px; height: 26px;
+    padding: 0 8px;
+    font-size: 12px;
+    color: #fff;
+    border: 1px solid rgba(255,255,255,.35);
+    border-radius: 6px;
+    background: rgba(255,255,255,.07);
+    -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px);
+    box-shadow: inset 0 -2px 0 rgba(255,255,255,.1);
+  }
+
+  /* ---------- leave transition ---------- */
+  #leave {
+    position: fixed; inset: 0;
+    background: #000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .5s ease-in;
+  }
+  #leave.on { opacity: 1; pointer-events: all; }
+
+  @media (max-width: 760px) {
+    .scrim { background: linear-gradient(0deg, rgba(3,5,9,.92) 0%, rgba(3,5,9,.55) 45%, rgba(3,5,9,0) 78%); }
+    .menu { top: auto; bottom: 28px; transform: none; }
+    .menu a { font-size: 26px; padding: 6px 0; }
+    .note, .keys { display: none; }
+    .cap { margin-bottom: 14px; }
+  }
+  @media (pointer: coarse) { .keys { display: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    #stage { transition-duration: .01s; }
+    .menu a, .menu a::before, .note { transition-duration: .01s; }
+    #leave { transition-duration: .01s; }
+  }
+</style>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+
+<div id="stage"></div>
+<div class="scrim"></div>
+
+<div class="brand"><i></i>THRESHOLD</div>
+
+<!--
+  ============================================================
+  EDIT HERE: this list is the single source of truth. The 3D
+  scene builds one monolith per link, in this order, and the
+  menu works on its own if 3D can't start.
+  Change href="" to your own .html files, change the names,
+  and edit data-note (the small line shown on the active item).
+  Add or remove <li> items freely (1 to 12).
+  ============================================================
+-->
+<nav class="menu" aria-label="Main menu">
+  <p class="cap">Select destination</p>
+  <ul id="gates">
+    <li><a href="page1.html" data-note="Start here"><span>Town Square</span><span class="note"></span></a></li>
+    <li><a href="page2.html" data-note="Everything in one place"><span>The Archives</span><span class="note"></span></a></li>
+    <li><a href="page3.html" data-note="A long way up"><span>Mountain Pass</span><span class="note"></span></a></li>
+    <li><a href="page4.html" data-note="Where the ships come in"><span>Harbor</span><span class="note"></span></a></li>
+    <li><a href="page5.html" data-note="Work in progress"><span>Workshop</span><span class="note"></span></a></li>
+    <li><a href="page6.html" data-note="You weren't supposed to find this"><span>Secret Level</span><span class="note"></span></a></li>
+  </ul>
+</nav>
+
+<div class="keys" aria-hidden="true">
+  <span><b class="key">&uarr;</b><b class="key">&darr;</b> Navigate</span>
+  <span><b class="key">Enter</b> Select</span>
+</div>
+
+<div id="leave"></div>
+
+<script type="module">
+/* ============================================================
+   MENU LOGIC (works with or without 3D)
+   ============================================================ */
+const links  = [...document.querySelectorAll('#gates a')];
+const N      = links.length;
+const leave  = document.getElementById('leave');
+const root   = document.documentElement;
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const ACCENTS = ['#5ad7ff', '#8aa6ff', '#b690ff', '#ff7ad1', '#ff9a6a', '#ffd27a'];
+const names = links.map(a => a.querySelector('span').textContent.trim());
+links.forEach(a => { a.querySelector('.note').textContent = a.dataset.note || ''; });
+
+let active = 0;
+let onActive = null;       // set by the 3D scene
+let launch = null;         // set by the 3D scene
+
+function setActive(i, fromScene) {
+  if (i < 0 || i >= N) return;
+  active = i;
+  links.forEach((a, k) => a.classList.toggle('is-active', k === i));
+  root.style.setProperty('--accent', ACCENTS[i % ACCENTS.length]);
+  if (onActive) onActive(i);
+}
+links.forEach((a, i) => {
+  a.addEventListener('mouseenter', () => setActive(i));
+  a.addEventListener('focus',      () => setActive(i));
+  a.addEventListener('click', e => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    if (!launch) return;                 // no 3D: just follow the link
+    e.preventDefault();
+    launch(i);
+  });
+});
+window.addEventListener('keydown', e => {
+  const dir = (e.code === 'ArrowDown' || e.code === 'KeyS') ? 1 : (e.code === 'ArrowUp' || e.code === 'KeyW') ? -1 : 0;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (dir) {
+    e.preventDefault();
+    const cur = links.indexOf(document.activeElement);
+    const next = ((cur < 0 ? active : cur) + dir + N) % N;
+    links[next].focus({ preventScroll: true });
+  } else if (e.code === 'Home') { e.preventDefault(); links[0].focus(); }
+  else if (e.code === 'End')    { e.preventDefault(); links[N - 1].focus(); }
+});
+window.addEventListener('pageshow', e => { if (e.persisted) leave.classList.remove('on'); });
+setActive(0);
+
+/* ============================================================
+   3D SCENE
+   ============================================================ */
+try {
+  const THREE = await import('three');
+  const [{ EffectComposer }, { RenderPass }, { UnrealBloomPass }, { OutputPass }, { ShaderPass }] = await Promise.all([
+    import('three/addons/postprocessing/EffectComposer.js'),
+    import('three/addons/postprocessing/RenderPass.js'),
+    import('three/addons/postprocessing/UnrealBloomPass.js'),
+    import('three/addons/postprocessing/OutputPass.js'),
+    import('three/addons/postprocessing/ShaderPass.js')
+  ]);
+
+  try { await Promise.race([document.fonts.load('300 40px Sora'), new Promise(r => setTimeout(r, 1500))]); } catch (e) {}
+
+  const stage = document.getElementById('stage');
+  const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+  const PR = Math.min(window.devicePixelRatio || 1, 1.75);
+  renderer.setPixelRatio(PR);
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.1;
+  stage.appendChild(renderer.domElement);
+  const canvas = renderer.domElement;
+
+  const FOG = 0x070b14;
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(FOG);
+  scene.fog = new THREE.FogExp2(FOG, 0.032);
+
+  const camera = new THREE.PerspectiveCamera(46, 1, 0.1, 400);
+  let camDist = 1;
+
+  /* ---------- post-processing: render, bloom, tonemap, then lens/grain finish ---------- */
+  const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
+  const composer = new EffectComposer(renderer, rt);
+  composer.setPixelRatio(PR);
+  composer.addPass(new RenderPass(scene, camera));
+  const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.85, 0.55, 0.88);
+  composer.addPass(bloom);
+  composer.addPass(new OutputPass());
+
+  const Finish = {
+    uniforms: { tDiffuse: { value: null }, time: { value: 0 }, aspect: { value: 1 } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `
+      uniform sampler2D tDiffuse; uniform float time; uniform float aspect; varying vec2 vUv;
+      float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+      void main(){
+        vec2 c = (vUv - 0.5) * vec2(aspect, 1.0);
+        float r2 = dot(c, c);
+        vec2 off = (vUv - 0.5) * r2 * 0.012;
+        vec3 col = vec3(texture2D(tDiffuse, vUv + off).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv - off).b);
+        col *= mix(0.55, 1.0, smoothstep(1.05, 0.25, sqrt(r2) * 1.15));
+        col += (hash(vUv * vec2(1920.0, 1080.0) + fract(time) * 100.0) - 0.5) * 0.045;
+        gl_FragColor = vec4(col, 1.0);
+      }`
+  };
+  const finish = new ShaderPass(Finish);
+  composer.addPass(finish);
+
+  function resize() {
+    const w = innerWidth, h = innerHeight, a = w / h;
+    camera.aspect = a;
+    camera.fov = a < 0.9 ? 70 : a < 1.4 ? 58 : 46;
+    camDist = a < 0.9 ? 1.55 : a < 1.4 ? 1.25 : 1;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+    composer.setSize(w, h);
+    finish.uniforms.aspect.value = a;
+  }
+  addEventListener('resize', resize);
+  resize();
+
+  /* ---------- procedural reflections: a dark studio with a few light panels ---------- */
+  (function () {
+    const env = new THREE.Scene();
+    env.background = new THREE.Color(0x02030a);
+    const panel = (w, h, col, k, pos) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h),
+        new THREE.MeshBasicMaterial({ color: new THREE.Color(col).multiplyScalar(k), side: THREE.DoubleSide }));
+      m.position.set(pos[0], pos[1], pos[2]); m.lookAt(0, 0, 0); env.add(m);
+    };
+    panel(30, 4, 0xbfe4ff, 6, [0, 14, -10]);
+    panel(4, 20, 0xffb890, 4, [-16, 4, 2]);
+    panel(4, 20, 0x7aa8ff, 5, [16, 4, 6]);
+    panel(40, 40, 0x203060, 0.4, [0, -12, 0]);
+    const pm = new THREE.PMREMGenerator(renderer);
+    scene.environment = pm.fromScene(env, 0.02).texture;
+  })();
+
+  /* ---------- texture helpers ---------- */
+  function canvasTex(w, h, draw, srgb = true) {
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    draw(c.getContext('2d'), w, h);
+    const t = new THREE.CanvasTexture(c);
+    if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 4;
+    return t;
+  }
+  const glowTex = canvasTex(64, 256, (g, w, h) => {
+    const img = g.createImageData(w, h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const fx = 1 - Math.pow(Math.abs(x - w / 2 + 0.5) / (w / 2), 3);
+      const fy = Math.pow(1 - y / h, 1.7);
+      const v = Math.max(0, fx * fy) * 255, i = (y * w + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255; img.data[i + 3] = v;
+    }
+    g.putImageData(img, 0, 0);
+  });
+  const beamTex = canvasTex(64, 256, (g, w, h) => {
+    const img = g.createImageData(w, h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const dx = (x - w / 2 + 0.5) / (w / 2);
+      const fx = Math.exp(-dx * dx * 4.5);
+      const fy = Math.pow(Math.sin(Math.PI * Math.min(1, (1 - y / h) * 1.05)), 1.2) * (1 - y / h * 0.35);
+      const v = Math.max(0, fx * fy) * 255, i = (y * w + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255; img.data[i + 3] = v;
+    }
+    g.putImageData(img, 0, 0);
+  });
+  const dotTex = canvasTex(32, 32, (g) => {
+    const gr = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+    gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,255,255,.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, 32, 32);
+  });
+  const hazeTex = canvasTex(128, 64, (g) => {
+    const gr = g.createRadialGradient(64, 32, 0, 64, 32, 62);
+    gr.addColorStop(0, 'rgba(120,200,255,.75)'); gr.addColorStop(0.5, 'rgba(60,110,200,.25)'); gr.addColorStop(1, 'rgba(20,40,100,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, 128, 64);
+  });
+  function labelTex(text) {
+    return canvasTex(96, 768, (g) => {
+      g.translate(48, 384); g.rotate(-Math.PI / 2);
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      let size = 40;
+      g.font = `300 ${size}px Sora, system-ui, sans-serif`;
+      if ('letterSpacing' in g) g.letterSpacing = '10px';
+      while (g.measureText(text).width > 660 && size > 14) { size -= 2; g.font = `300 ${size}px Sora, system-ui, sans-serif`; }
+      g.fillStyle = '#fff';
+      g.fillText(text, 0, 0);
+    });
+  }
+
+  /* ---------- floor: wet obsidian, with mirrored copies of the monoliths under it ---------- */
+  const noise = canvasTex(256, 256, (g, w, h) => {
+    g.fillStyle = '#5a5a5a'; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 5000; i++) {
+      const v = 60 + Math.random() * 60 | 0;
+      g.fillStyle = `rgb(${v},${v},${v})`;
+      g.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 3, 1);
+    }
+  }, false);
+  noise.wrapS = noise.wrapT = THREE.RepeatWrapping;
+  noise.repeat.set(40, 40);
+
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(240, 240),
+    new THREE.MeshStandardMaterial({ color: 0x04060a, metalness: 0.6, roughness: 1, roughnessMap: noise, transparent: true, opacity: 0.9, envMapIntensity: 0.6 }));
+  floor.rotation.x = -Math.PI / 2;
+  scene.add(floor);
+
+  /* ---------- far silhouettes for scale ---------- */
+  (function () {
+    const m = new THREE.MeshStandardMaterial({ color: 0x070a12, metalness: 0.8, roughness: 0.45, envMapIntensity: 0.7 });
+    for (let i = 0; i < 18; i++) {
+      const h = 14 + Math.random() * 28, w = 3 + Math.random() * 5;
+      const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, 3 + Math.random() * 4), m);
+      b.position.set((Math.random() - 0.5) * 130, h / 2, -38 - Math.random() * 50);
+      scene.add(b);
+    }
+    const haze = new THREE.Sprite(new THREE.SpriteMaterial({ map: hazeTex, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, fog: false, opacity: 0.55 }));
+    haze.scale.set(190, 70, 1); haze.position.set(0, 10, -85);
+    scene.add(haze);
+  })();
+
+  /* ---------- the monoliths ---------- */
+  const bodyMat = new THREE.MeshPhysicalMaterial({ color: 0x0a0e18, metalness: 0.92, roughness: 0.14, clearcoat: 1, clearcoatRoughness: 0.06, envMapIntensity: 1.5 });
+  const slabs = [];
+  const SPACING = 3.5;
+
+  links.forEach((a, i) => {
+    const hue = new THREE.Color(ACCENTS[i % ACCENTS.length]);
+    const h = 6.2 + ((i * 37) % 5) * 0.55;
+    const x = (i - (N - 1) / 2) * SPACING;
+    const z = -4 + x * x * 0.05;
+
+    const g = new THREE.Group();
+    g.position.set(x, 0.3, z);
+    g.lookAt(0, 0.3, 16);
+    g.userData.slab = i;
+
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.7, h, 0.4), bodyMat);
+    body.position.y = h / 2; g.add(body);
+
+    const glowMat = new THREE.MeshBasicMaterial({ map: glowTex, color: hue.clone(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+    const glow = new THREE.Mesh(new THREE.PlaneGeometry(1.36, h - 0.5), glowMat);
+    glow.position.set(0, h / 2, 0.203); g.add(glow);
+
+    const edgeMat = new THREE.MeshBasicMaterial({ color: hue.clone(), fog: false });
+    [-0.87, 0.87].forEach(ex => {
+      const e = new THREE.Mesh(new THREE.BoxGeometry(0.035, h, 0.035), edgeMat);
+      e.position.set(ex, h / 2, 0.21); g.add(e);
+    });
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.05, 0.42), edgeMat);
+    cap.position.set(0, h + 0.025, 0); g.add(cap);
+
+    const labMat = new THREE.MeshBasicMaterial({ map: labelTex(names[i]), color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+    const lab = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 4), labMat);
+    lab.position.set(0, h * 0.55, 0.206); g.add(lab);
+
+    const light = new THREE.PointLight(hue, 6, 15, 2);
+    light.position.set(x, 2.6, z + 2.4);
+    scene.add(light);
+
+    scene.add(g);
+    const mirror = g.clone(true);
+    scene.add(mirror);
+
+    slabs.push({ g, mirror, glowMat, edgeMat, labMat, light, hue, baseX: x, baseZ: z, h, cur: 0 });
+  });
+
+  /* ---------- light shaft on the active monolith ---------- */
+  const beamMat = new THREE.MeshBasicMaterial({ map: beamTex, color: slabs[0].hue.clone(), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
+  const beam = new THREE.Group();
+  for (let k = 0; k < 2; k++) {
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(5, 18), beamMat);
+    p.position.y = 9; p.rotation.y = k * Math.PI / 2; beam.add(p);
+  }
+  scene.add(beam);
+
+  /* ---------- drifting dust ---------- */
+  const DUST = 520, dustPos = new Float32Array(DUST * 3), dustSeed = new Float32Array(DUST);
+  for (let i = 0; i < DUST; i++) {
+    dustPos[i * 3] = (Math.random() - 0.5) * 30; dustPos[i * 3 + 1] = Math.random() * 10; dustPos[i * 3 + 2] = -12 + Math.random() * 26;
+    dustSeed[i] = Math.random() * 6.28;
+  }
+  const dustGeo = new THREE.BufferGeometry();
+  dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+  scene.add(new THREE.Points(dustGeo, new THREE.PointsMaterial({ map: dotTex, color: 0x9fdcff, size: 0.11, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false })));
+
+  /* ---------- interaction ---------- */
+  const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+  const par = { x: 0, y: 0, tx: 0, ty: 0 };
+  let hoverSlab = -1;
+
+  function pick(cx, cy) {
+    mouse.set((cx / innerWidth) * 2 - 1, -(cy / innerHeight) * 2 + 1);
+    ray.setFromCamera(mouse, camera);
+    const hits = ray.intersectObjects(slabs.map(s => s.g), true);
+    if (!hits.length) return -1;
+    let o = hits[0].object;
+    while (o && o.userData.slab === undefined) o = o.parent;
+    return o ? o.userData.slab : -1;
+  }
+  addEventListener('pointermove', e => {
+    if (!reduced) { par.tx = (e.clientX / innerWidth - 0.5) * 2; par.ty = (e.clientY / innerHeight - 0.5) * 2; }
+    if (e.pointerType === 'mouse' && e.target === canvas) {
+      const i = pick(e.clientX, e.clientY);
+      hoverSlab = i;
+      canvas.style.cursor = i >= 0 ? 'pointer' : 'default';
+      if (i >= 0 && i !== active) setActive(i);
+    }
+  });
+  canvas.addEventListener('click', e => {
+    const i = pick(e.clientX, e.clientY);
+    if (i >= 0) { setActive(i); launch(i); }
+  });
+
+  let leaving = -1, leaveT = 0;
+  launch = (i) => {
+    if (leaving >= 0) return;
+    leaving = i; leaveT = 0;
+    setActive(i);
+    if (reduced) { leave.classList.add('on'); setTimeout(() => { location.href = links[i].href; }, 60); }
+  };
+  addEventListener('pageshow', e => {
+    if (e.persisted) { leaving = -1; leaveT = 0; bloom.strength = 0.85; leave.classList.remove('on'); }
+  });
+  onActive = () => {};
+
+  /* ---------- main loop ---------- */
+  const camPos = new THREE.Vector3(0, 2, 17 * camDist), look = new THREE.Vector3(0, 3, -4);
+  const tPos = new THREE.Vector3(), tLook = new THREE.Vector3();
+  const clock = new THREE.Clock();
+  let time = 0, first = true;
+  const ease = t => t * t * (3 - 2 * t);
+
+  function frame() {
+    requestAnimationFrame(frame);
+    const dt = Math.min(clock.getDelta(), 0.05);
+    time += dt;
+    finish.uniforms.time.value = time;
+
+    par.x += (par.tx - par.x) * (1 - Math.exp(-dt * 3));
+    par.y += (par.ty - par.y) * (1 - Math.exp(-dt * 3));
+
+    /* focus amounts, monolith motion, lights */
+    slabs.forEach((s, i) => {
+      const goal = (i === active) ? 1 : 0;
+      s.cur += (goal - s.cur) * (1 - Math.exp(-dt * 5));
+      const c = s.cur;
+      s.g.position.z = s.baseZ + 1.3 * c;
+      s.g.position.y = 0.3 + 0.16 * c + (reduced ? 0 : Math.sin(time * 0.8 + i) * 0.05 * c);
+      s.g.scale.setScalar(1 + 0.03 * c);
+      s.glowMat.color.copy(s.hue).multiplyScalar(0.35 + 2.3 * c);
+      s.edgeMat.color.copy(s.hue).multiplyScalar(1.1 + 3.2 * c);
+      s.labMat.color.setScalar(0.4 + 1.5 * c);
+      s.light.intensity = 6 + 62 * c;
+      s.light.position.z = s.g.position.z + 2.4;
+
+      s.mirror.position.set(s.g.position.x, -s.g.position.y, s.g.position.z);
+      s.mirror.rotation.copy(s.g.rotation);
+      s.mirror.scale.set(s.g.scale.x, -s.g.scale.y, s.g.scale.z);
+    });
+
+    const a = slabs[active];
+    beam.position.x += (a.g.position.x - beam.position.x) * (1 - Math.exp(-dt * 6));
+    beam.position.z += (a.g.position.z - 0.6 - beam.position.z) * (1 - Math.exp(-dt * 6));
+    beamMat.color.lerp(a.hue, 1 - Math.exp(-dt * 5));
+    beamMat.opacity = 0.42 * a.cur;
+    beam.rotation.y += dt * 0.05;
+
+    /* camera: glides toward the active monolith, with a slow dolly-in on load */
+    const k = reduced ? 1 : Math.min(1, time / 3.6);
+    const intro = (1 - (1 - Math.pow(1 - k, 3))) * 6;
+    const idle = reduced ? 0 : Math.sin(time * 0.25) * 0.18;
+    tPos.set(a.baseX * 0.5 + par.x * 0.8 + idle, 1.9 - par.y * 0.3, 11 * camDist + intro);
+    tLook.set(a.baseX * 0.85, 3.3 + par.y * -0.2, -2);
+
+    let rate = 2.2;
+    if (leaving >= 0) {
+      leaveT += dt;
+      const s = slabs[leaving], e = ease(Math.min(1, leaveT / 0.75));
+      tPos.x += (s.g.position.x - tPos.x) * e;
+      tPos.z += (s.g.position.z + 1.2 - tPos.z) * e;
+      tPos.y += (3.2 - tPos.y) * e;
+      tLook.set(s.g.position.x, 3.4, s.g.position.z);
+      bloom.strength = 0.85 + leaveT * 4.5;
+      rate = 5;
+      if (leaveT > 0.4) leave.classList.add('on');
+      if (leaveT > 0.95) { const href = links[leaving].href; leaving = -1; location.href = href; }
+    }
+    const f = 1 - Math.exp(-dt * rate);
+    camPos.lerp(tPos, f);
+    look.lerp(tLook, f);
+    camera.position.copy(camPos);
+    camera.lookAt(look);
+
+    /* dust */
+    if (!reduced) {
+      for (let i = 0; i < DUST; i++) {
+        dustPos[i * 3 + 1] += dt * 0.12;
+        dustPos[i * 3]     += Math.sin(time * 0.3 + dustSeed[i]) * dt * 0.08;
+        if (dustPos[i * 3 + 1] > 10) dustPos[i * 3 + 1] = 0;
+      }
+      dustGeo.attributes.position.needsUpdate = true;
+    }
+
+    composer.render();
+    if (first) { first = false; stage.classList.add('ready'); }
+  }
+  frame();
+
+} catch (err) {
+  console.warn('3D scene unavailable, showing the plain menu.', err);
+}
+</script>
+</body>
+</html>
