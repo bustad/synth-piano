@@ -4,7 +4,7 @@ A single-file, browser-based synth piano with a built-in sight-singing trainer. 
 
 ## Getting started
 
-1. Save `index.html` anywhere on your computer, or go to [https://bustad.github.io/synth-piano/](https://bustad.github.io/synth-piano/).
+1. Save `index.html` anywhere on your computer.
 2. Open it in a modern desktop or mobile browser (it uses the Web Audio API, which current versions of Chrome, Edge, Firefox and Safari support).
 3. Click or tap a key. Browsers only allow audio after a user gesture, so sound starts on your first interaction.
 
@@ -62,6 +62,9 @@ Choose from the **Sound** menu. Piano sounds decay naturally; synth and retro so
 - Bold rows are the major scale; the second solfege name on chromatic rows is the alternate spelling (Di = raised Do = Ra).
 - Click and hold a row to hear that pitch.
 - Tick **Show the lit note on the ladder** to highlight the current trainer note's row, so you can check your answer. It is off by default.
+
+### Links section
+A "Links" section sits below the manual and currently holds four placeholder links. To use it, open `piano.html`, find `<section class="links">`, and replace each `<li>` with your own address (`href`), title and short description. Add or delete `<li>` lines as needed.
 
 ## Suggested way to practise
 

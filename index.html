@@ -45,6 +45,13 @@
   .lrow.down { background:var(--accent); color:#fff; }
   .lrow.target { background:#6fd68a; color:#0b3b1b; border-color:#2fa85a; opacity:1; }
   .reveal { flex-direction:row; align-items:center; gap:6px; margin-top:12px; }
+  .links { width:100%; max-width:1000px; background:var(--panel); border-radius:12px; padding:6px 22px 18px;
+           font-size:.9rem; line-height:1.55; }
+  .links h2 { margin:12px 0 8px; font-size:1.05rem; }
+  .links ul { margin:4px 0; padding-left:1.3em; }
+  .links li { margin:4px 0; }
+  .links a { color:var(--accent); }
+  .links .empty { margin:4px 0; opacity:.7; font-style:italic; }
   .memory { margin:0; font-size:.8rem; opacity:.85; text-align:center; }
   .memory button { padding:4px 10px; font-size:.8rem; margin-left:6px; }
   kbd { background:var(--bg); border:1px solid var(--accent); border-radius:4px; padding:0 5px; font-size:.85em; }
@@ -235,6 +242,18 @@
     Wobble bass sounds best with Octave set to −1 or −2. The pure-sine sounds (Mellow, Music box, Glass pad, Organ, 8-bit triangle) are the easiest to match with your voice.</p>
   </details>
   </div>
+
+  <section class="links" id="links" aria-label="Links">
+    <h2>Links</h2>
+    <!-- Placeholder links: replace the href (address), the title and the description of each item.
+         Add or delete <li> lines as needed. -->
+    <ul>
+      <li><a href="https://example.com/link-1" target="_blank" rel="noopener">Placeholder link 1</a> – replace with a title and short description</li>
+      <li><a href="https://example.com/link-2" target="_blank" rel="noopener">Placeholder link 2</a> – replace with a title and short description</li>
+      <li><a href="https://example.com/link-3" target="_blank" rel="noopener">Placeholder link 3</a> – replace with a title and short description</li>
+      <li><a href="https://example.com/link-4" target="_blank" rel="noopener">Placeholder link 4</a> – replace with a title and short description</li>
+    </ul>
+  </section>
 
   <p class="memory"><span id="memStatus"></span> <button id="resetBtn">Reset all settings</button></p>
 
