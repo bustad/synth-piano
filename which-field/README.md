@@ -29,7 +29,7 @@ Fields can hold one name or several. Comparing "Major triad" with "Minor triad" 
 | **Reveal** | Shows which field was played, the transposition, and which example was chosen from each group, without guessing. |
 | **Next round** | Discards the current round and starts a new one. |
 | **Tempo** | Speed in beats per minute. |
-| **Sound** | Keys (electric-piano style), Soft pad, or Organ. Applies from the next Play. |
+| **Sound** | Which synth sound to use: Keys (electric-piano style), Soft pad and Organ, plus any sounds you create. Applies from the next Play. |
 | **Reverb** | How much reverb you hear. You can move it while playing. |
 
 Replaying or looping always uses the same pick until you press **Next round**. Editing the fields, the library or turning Transpose on or off also discards the current round.
@@ -78,7 +78,7 @@ C4/1 Eb4/2
 | `R/1` | A rest. |
 | `#` at the start of a line | A comment. |
 
-Between the examples of a round (when a field lists several groups), the page adds a one-beat gap.
+When a field lists several groups, the examples play back to back with no gap. To add a pause, end an example with a rest such as `R/1`.
 
 ### Included groups
 
@@ -92,21 +92,27 @@ The page doesn't read MIDI files. If you have MIDI examples, write the notes int
 
 ## Synth settings
 
-Open **Synth settings** to see and change how the selected sound is built. Each sound keeps its own settings.
+Open **Synth settings** to see and change how the selected sound is built. Each sound keeps its own settings. Hover over any setting (or a column heading in the oscillator table) to see a short explanation.
 
 - **Envelope:** attack, decay, sustain and release.
 - **Filter:** where the low-pass filter starts and ends (as a multiple of each note's pitch), how fast it closes, and its resonance.
 - **Oscillators:** four rows, each with a wave shape (off, sine, triangle, sawtooth, square), a pitch multiple, a detune in cents and a level.
 - **Reverb length** in seconds. This changes the reverb straight away. All other changes apply from the next Play.
 
-**Reset this sound to default** restores the selected sound's original values. It doesn't touch the other sounds.
+The sounds themselves are editable too. Use the name box and buttons at the top of the section:
+
+- **Rename** changes the selected sound's name.
+- **Save as new sound** copies the selected sound, with the name in the box, so you can experiment without losing the original.
+- **Delete** removes the selected sound (click twice to confirm). At least one sound must remain.
+- **Restore built-in sounds** brings back any of Keys, Soft pad and Organ that you deleted.
+- **Reset this sound to default** (built-in sounds only) restores the selected sound's original values. It doesn't touch the other sounds.
 
 ## Saving
 
 Everything you edit is saved automatically in your browser: the library, the starting points, fields A and B, the sound, the reverb amount and the synth settings.
 
 - Saved data belongs to one browser and one file location. Moving the HTML file or opening it in another browser starts from the defaults.
-- To keep or share a library, copy the text out of the editing boxes into a text file.
+- **Export settings** downloads everything above as one file (`ear-training-settings.json`). **Import settings** loads such a file, replacing your current library, starting points, fields, sound, reverb and synth settings. Use these to back up your work, move it to another browser or device, or share it.
 - **Reset library and starting points to defaults** (always visible below the library) restores the original library and starting points. Click it, then click it again within 4 seconds to confirm. It doesn't change your synth settings or the A/B fields.
 
 ## Troubleshooting

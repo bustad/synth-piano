@@ -35,6 +35,8 @@ tbody tr{cursor:pointer}tbody tr:hover{background:color-mix(in srgb,var(--acc) 1
 .oscs{margin:8px 0;max-width:640px}
 .oscs input,.oscs select{width:100%;padding:5px}
 #synthui{padding:6px 0}
+input[type=text]{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:7px;font:inherit}
+.grid label[title],.oscs th[title]{cursor:help}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{padding:3px 10px;font-size:13px;border-radius:999px}
 .chip small{color:var(--mut)}
@@ -140,7 +142,8 @@ D4/.5 E4/.5 F4/.5 G4/.5 A4/.5 B4/.5 C5/.5 D5/2
 C4/.5 D4/.5 Eb4/.5 F4/.5 G4/.5 A4/.5 Bb4/.5 C5/2
 </textarea>
 </details>
-<div class="bar"><button id="reset">Reset library and starting points to defaults</button><span class="note">Edits to the library, starting points and fields are saved automatically in this browser.</span></div>
+<div class="bar"><button id="reset">Reset library and starting points to defaults</button><button id="export">Export settings</button><button id="import">Import settings</button><input type="file" id="importfile" accept=".json,application/json" hidden><span class="note" id="iomsg"></span></div>
+<p class="note">Everything you edit is saved automatically in this browser. Export saves it all to a file you can keep, share, or import in another browser.</p>
 
 <script>
 const $=id=>document.getElementById(id);
@@ -155,9 +158,10 @@ Minor 2nd up, Major 2nd up | Major 2nd up, Minor 2nd up | Order of small interva
 Major scale up | Dorian scale up | Scale colour: lowered 3rd and 7th in Dorian
 Min7 chord, Dom7 chord | Dom7 chord, Min7 chord | Order of seventh chords`;
 const KEY="eartrain.v1";
-function save(){try{localStorage.setItem(KEY,JSON.stringify({lib:$("lib").value,starts:$("startsrc").value,fa:$("fa").value,fb:$("fb").value,sound:$("sound").value,rev:$("reverb").value,synth:PRESETS,revLen}))}catch(e){}}
+function state(){return{app:"ear-training",version:1,lib:$("lib").value,starts:$("startsrc").value,fa:$("fa").value,fb:$("fb").value,sound:$("sound").value,rev:$("reverb").value,synth:PRESETS,revLen}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state()))}catch(e){}}
 function load(){try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return {}}}
-const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
 let STARTS=[];
 function renderStarts(){
   STARTS=$("startsrc").value.split("\n").map(l=>l.trim()).filter(l=>l&&l[0]!="#"&&l.includes("|")).map(l=>{const q=l.split("|").map(x=>x.trim());return[q[0],q[1],q.slice(2).join(" | ")]});
@@ -184,9 +188,9 @@ const NOTE={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
 function setStatus(t,err){const s=$("status");s.textContent=t;s.className=err?"err":""}
 
 const PRESETS={
- keys:{osc:[["sawtooth",1,-6,.4],["sawtooth",1,6,.4],["triangle",1,0,.9],["sine",2,0,.15]],fc:[7,2.2],fcT:.45,atk:.006,dec:1.1,sus:.22,rel:.4},
- pad:{osc:[["sawtooth",1,-12,.4],["sawtooth",1,12,.4],["sine",1,0,.6]],fc:[3.2,3.2],fcT:.1,atk:.14,dec:.3,sus:.85,rel:.6},
- organ:{osc:[["sine",1,0,.6],["sine",2,0,.4],["sine",3,0,.2],["sine",4,0,.1]],fc:[20,20],fcT:.1,atk:.02,dec:.1,sus:1,rel:.15}
+ keys:{name:"Keys",osc:[["sawtooth",1,-6,.4],["sawtooth",1,6,.4],["triangle",1,0,.9],["sine",2,0,.15]],fc:[7,2.2],fcT:.45,atk:.006,dec:1.1,sus:.22,rel:.4},
+ pad:{name:"Soft pad",osc:[["sawtooth",1,-12,.4],["sawtooth",1,12,.4],["sine",1,0,.6]],fc:[3.2,3.2],fcT:.1,atk:.14,dec:.3,sus:.85,rel:.6},
+ organ:{name:"Organ",osc:[["sine",1,0,.6],["sine",2,0,.4],["sine",3,0,.2],["sine",4,0,.1]],fc:[20,20],fcT:.1,atk:.02,dec:.1,sus:1,rel:.15}
 };
 let bus=null;
 function impulse(dur,decay){const sr=ctx.sampleRate,n=Math.floor(sr*dur),b=ctx.createBuffer(2,n,sr);
@@ -202,20 +206,43 @@ function setRev(){if(!bus)return;const v=$("reverb").value/100;
   bus.wet.gain.setTargetAtTime(v*1.3,ctx.currentTime,.03);bus.dry.gain.setTargetAtTime(1-.3*v,ctx.currentTime,.03)}
 const DEFP=JSON.parse(JSON.stringify(PRESETS));
 let revLen=saved.revLen||2.8;
-if(saved.synth)for(const k in PRESETS)if(saved.synth[k]&&Array.isArray(saved.synth[k].osc))PRESETS[k]=saved.synth[k];
-const NUM=[["atk","Attack (s)",0,2,.001],["dec","Decay (s)",.02,5,.01],["sus","Sustain (0-1)",0,1,.01],["rel","Release (s)",.02,3,.01],["fc0","Filter start (x pitch)",1,20,.1],["fc1","Filter end (x pitch)",1,20,.1],["fcT","Filter speed (s)",.02,3,.01],["q","Resonance",.1,12,.1]];
+let delArm=null;
+function loadSynth(syn){const ok={};
+  for(const k in syn){const x=syn[k];
+    if(/^[A-Za-z0-9_]+$/.test(k)&&x&&Array.isArray(x.osc)&&x.osc.every(r=>Array.isArray(r)&&r.length>=4)&&Array.isArray(x.fc)&&x.fc.length>=2){
+      x.name=(typeof x.name=="string"&&x.name.trim())?x.name:((DEFP[k]&&DEFP[k].name)||k);ok[k]=x}}
+  if(!Object.keys(ok).length)return;
+  for(const k in PRESETS)delete PRESETS[k];
+  Object.assign(PRESETS,ok)}
+function renderSoundMenu(sel){
+  $("sound").innerHTML=Object.entries(PRESETS).map(([k,P])=>`<option value="${esc(k)}">${esc(P.name||k)}</option>`).join("");
+  $("sound").value=PRESETS[sel]?sel:Object.keys(PRESETS)[0]}
+function pMsg(t){const m=$("pmsg");if(m)m.textContent=t}
+if(saved.synth)loadSynth(saved.synth);
+const NUM=[
+ ["atk","Attack (s)",0,2,.001,"Attack: how long a note takes to fade in from silence to full volume. Short sounds percussive, long sounds soft and swelling."],
+ ["dec","Decay (s)",.02,5,.01,"Decay: how long the volume takes to fall from its peak to the sustain level. Short sounds plucked, long sounds lingering."],
+ ["sus","Sustain (0-1)",0,1,.01,"Sustain: the volume a held note settles on after the decay, relative to its peak. 0 means it dies away completely, 1 means it stays at full volume."],
+ ["rel","Release (s)",.02,3,.01,"Release: how long a note takes to fade out after its written length ends. Longer is smoother and lets notes overlap."],
+ ["fc0","Filter start (x pitch)",1,20,.1,"Filter start: where the low-pass filter cuts off at the start of each note, as a multiple of the note pitch. Higher means a brighter attack."],
+ ["fc1","Filter end (x pitch)",1,20,.1,"Filter end: the cutoff the filter moves toward as the note continues. Lower than the start makes the note mellower over time. Equal to the start gives a steady tone."],
+ ["fcT","Filter speed (s)",.02,3,.01,"Filter speed: how quickly the cutoff moves from start to end (a time constant in seconds). Small is fast, large is slow."],
+ ["q","Resonance",.1,12,.1,"Resonance: boosts the frequencies right at the filter cutoff (roughly in dB). About 0.7 is neutral. 2 to 6 gives a vocal, wah-like character as the cutoff sweeps. High values sound nasal or ringing. Keep it low for the clearest pitch."]
+];
+const OT=["Wave: the shape of this oscillator. Sine is a pure tone, triangle is soft, sawtooth is bright and buzzy, square is hollow. Off mutes the row.","Pitch multiple: 1 is the written pitch, 2 is an octave up, 0.5 an octave down, 3 an octave plus a fifth up.","Detune: fine tuning in cents (100 cents is one semitone). Small opposite detunes on two oscillators give a richer, chorus-like sound.","Level: the volume of this oscillator relative to the others."];
 const getv=(P,k)=>k=="fc0"?P.fc[0]:k=="fc1"?P.fc[1]:P[k];
 const setv=(P,k,v)=>{if(k=="fc0")P.fc[0]=v;else if(k=="fc1")P.fc[1]=v;else P[k]=v};
 function renderSynth(){
   const P=PRESETS[$("sound").value];if(P.q==null)P.q=.7;while(P.osc.length<4)P.osc.push(["off",1,0,0]);
-  let h='<p class="note">Settings for the selected sound ("Sound" menu above). Changes apply from the next Play.</p><div class="grid">';
-  for(const [k,l,mn,mx,st] of NUM)h+=`<label>${l}<input type="number" data-k="${k}" min="${mn}" max="${mx}" step="${st}" value="${getv(P,k)}"></label>`;
-  h+=`<label>Reverb length (s)<input type="number" id="revlen" min="0.3" max="8" step="0.1" value="${revLen}"></label></div>`;
-  h+='<table class="oscs"><thead><tr><th>Osc</th><th>Wave</th><th>Pitch x</th><th>Detune (cents)</th><th>Level</th></tr></thead><tbody>';
+  clearTimeout(delArm);delArm=null;
+  let h=`<div class="bar" style="margin:6px 0"><label style="font-weight:400">Name <input id="pname" type="text" value="${esc(P.name||"")}" style="width:12em"></label><button id="prename">Rename</button><button id="pnew">Save as new sound</button><button id="pdel">Delete</button><button id="prestore">Restore built-in sounds</button><span class="note" id="pmsg"></span></div><p class="note">Settings for the selected sound ("Sound" menu above). Changes apply from the next Play. Hover over a setting for an explanation.</p><div class="grid">`;
+  for(const [k,l,mn,mx,st,tip] of NUM)h+=`<label title="${tip}">${l}<input type="number" data-k="${k}" min="${mn}" max="${mx}" step="${st}" value="${getv(P,k)}"></label>`;
+  h+=`<label title="Reverb length: how long the reverb tail lasts, in seconds. Shorter is clearer, longer sounds like a bigger room."><span>Reverb length (s)</span><input type="number" id="revlen" min="0.3" max="8" step="0.1" value="${revLen}"></label></div>`;
+  h+=`<table class="oscs"><thead><tr><th>Osc</th><th title="${OT[0]}">Wave</th><th title="${OT[1]}">Pitch x</th><th title="${OT[2]}">Detune (cents)</th><th title="${OT[3]}">Level</th></tr></thead><tbody>`;
   P.osc.forEach((o,i)=>{
-    const ni=(f,mn,mx,st)=>`<td><input type="number" data-o="${i}" data-f="${f}" min="${mn}" max="${mx}" step="${st}" value="${o[f]}"></td>`;
-    h+=`<tr><td>${i+1}</td><td><select data-o="${i}" data-f="0">${["off","sine","triangle","sawtooth","square"].map(w=>`<option${w==o[0]?" selected":""}>${w}</option>`).join("")}</select></td>${ni(1,.25,8,.5)}${ni(2,-100,100,1)}${ni(3,0,1.5,.05)}</tr>`});
-  h+='</tbody></table><button id="synthreset">Reset this sound to default</button>';
+    const ni=(f,mn,mx,st)=>`<td><input title="${OT[f]}" type="number" data-o="${i}" data-f="${f}" min="${mn}" max="${mx}" step="${st}" value="${o[f]}"></td>`;
+    h+=`<tr><td>${i+1}</td><td><select title="${OT[0]}" data-o="${i}" data-f="0">${["off","sine","triangle","sawtooth","square"].map(w=>`<option${w==o[0]?" selected":""}>${w}</option>`).join("")}</select></td>${ni(1,.25,8,"any")}${ni(2,-100,100,1)}${ni(3,0,1.5,.05)}</tr>`});
+  h+=`</tbody></table>${DEFP[$("sound").value]?'<button id="synthreset">Reset this sound to default</button>':''}`;
   $("synthui").innerHTML=h}
 function synthEdit(e){const t=e.target,P=PRESETS[$("sound").value],v=parseFloat(t.value);
   if(t.id=="revlen"){if(v>=.3&&v<=8){revLen=v;if(bus)bus.conv.buffer=impulse(v,2.4)}}
@@ -224,9 +251,23 @@ function synthEdit(e){const t=e.target,P=PRESETS[$("sound").value],v=parseFloat(
   else return;
   save()}
 $("synthui").addEventListener("input",synthEdit);$("synthui").addEventListener("change",synthEdit);
-$("synthui").addEventListener("click",e=>{if(e.target.id=="synthreset"){PRESETS[$("sound").value]=JSON.parse(JSON.stringify(DEFP[$("sound").value]));renderSynth();save()}});
+$("synthui").addEventListener("click",e=>{const id=e.target.id,cur=$("sound").value,P=PRESETS[cur];
+  if(id=="synthreset"){PRESETS[cur]=JSON.parse(JSON.stringify(DEFP[cur]));renderSoundMenu(cur);renderSynth();save();pMsg("Reset.")}
+  else if(id=="prename"){const nm=$("pname").value.trim();if(!nm){pMsg("Enter a name first.");return}
+    P.name=nm;renderSoundMenu(cur);renderSynth();save();pMsg("Renamed.")}
+  else if(id=="pnew"){let nm=$("pname").value.trim();if(!nm||nm===P.name)nm=(P.name||"Sound")+" copy";
+    let n=1;while(PRESETS["c"+n])n++;const nid="c"+n;
+    PRESETS[nid]=JSON.parse(JSON.stringify(P));PRESETS[nid].name=nm;
+    renderSoundMenu(nid);renderSynth();save();pMsg("Saved as a new sound.")}
+  else if(id=="pdel"){
+    if(Object.keys(PRESETS).length<2){pMsg("At least one sound must remain.");return}
+    if(!delArm){e.target.textContent="Click again to delete";delArm=setTimeout(()=>{delArm=null;const b=$("pdel");if(b)b.textContent="Delete"},4000);return}
+    clearTimeout(delArm);delArm=null;delete PRESETS[cur];renderSoundMenu();renderSynth();save();pMsg("Deleted.")}
+  else if(id=="prestore"){let c=0;for(const k in DEFP)if(!PRESETS[k]){PRESETS[k]=JSON.parse(JSON.stringify(DEFP[k]));c++}
+    renderSoundMenu(cur);renderSynth();save();pMsg(c?"Restored "+c+" built-in sound(s).":"All built-in sounds are present.")}
+});
 $("sound").addEventListener("change",renderSynth);
-renderSynth();
+renderSoundMenu(saved.sound);renderSynth();
 function midi(s){const m=s.match(/^([A-Ga-g])([#b]?)(-?\d)$/);if(!m)throw new Error("Bad note: "+s);
   return 12*(+m[3]+1)+NOTE[m[1].toUpperCase()]+(m[2]=="#"?1:m[2]=="b"?-1:0)}
 function parseLine(line){let t=0;const ev=[];
@@ -254,19 +295,19 @@ function newRound(){
     const line=g.files[Math.floor(Math.random()*g.files.length)];
     const p=parseLine(line);
     for(const e of p.ev)ev.push({...e,m:e.m+shift,t:e.t+t});
-    used.push(g.name+": "+line);t+=p.len+1}
-  round={which,ev,len:t-1,used,shift,guessed:false};
+    used.push(g.name+": "+line);t+=p.len}
+  round={which,ev,len:t,used,shift,guessed:false};
   $("answer").style.display="none"}
 
 function play(at){
   try{if(!round)newRound()}catch(e){setStatus(e.message,true);return}
-  ctx=ctx||new (window.AudioContext||window.webkitAudioContext)();ctx.resume();if(!bus)makeBus();
+  ctx=ctx||new (window.AudioContext||window.webkitAudioContext)({latencyHint:"playback"});ctx.resume();if(!bus)makeBus();
   const cont=at!==undefined&&master;
   if(!cont){stopSound();master=ctx.createGain();master.gain.value=.8;master.connect(bus.input)}
-  const beat=60/Math.max(40,+$("tempo").value||100),t0=cont?at:ctx.currentTime+.08;
+  const beat=60/Math.max(40,+$("tempo").value||100),t0=cont?Math.max(at,ctx.currentTime+.03):ctx.currentTime+.2;
   const endT=t0+round.len*beat;
   for(const e of round.ev){
-    const P=PRESETS[$("sound").value]||PRESETS.keys;
+    const P=PRESETS[$("sound").value]||Object.values(PRESETS)[0];
     const f=440*Math.pow(2,(e.m-69)/12),s=t0+e.t*beat,end=Math.max(s+.2,s+e.d*beat),pk=.3/Math.sqrt(e.c);
     const g=ctx.createGain();g.connect(master);
     const fl=ctx.createBiquadFilter();fl.type="lowpass";fl.Q.value=P.q||.7;fl.connect(g);
@@ -278,14 +319,14 @@ function play(at){
     g.gain.setTargetAtTime(0,end,P.rel/3);
     for(const [type,mul,det,vol] of P.osc){if(type=="off"||!(vol>0))continue;
       const o=ctx.createOscillator(),v=ctx.createGain();v.gain.value=vol;
-      o.type=type;o.frequency.value=f*mul;o.detune.value=det;o.connect(v);v.connect(fl);o.start(s);o.stop(end+P.rel*2)}}
+      o.type=type;o.frequency.value=f*mul;o.detune.value=det;o.connect(v);v.connect(fl);o.start(s);o.stop(end+P.rel*4+.1)}}
   playing=true;$("play").textContent="Stop";
   setStatus("Playing…");
   clearTimeout(timer);
   timer=setTimeout(()=>{
     if(looping&&playing)play(endT);
     else timer=setTimeout(()=>{if(looping&&playing)play(endT);else stop()},Math.max(0,(endT+.3-ctx.currentTime)*1000));
-  },Math.max(0,(endT-ctx.currentTime-.1)*1000))}
+  },Math.max(0,(endT-ctx.currentTime-.5)*1000))}
 
 function stopSound(){clearTimeout(timer);if(master){try{master.gain.cancelScheduledValues(ctx.currentTime);master.gain.setTargetAtTime(0,ctx.currentTime,.02);const m=master;setTimeout(()=>m.disconnect(),200)}catch(e){}master=null}}
 function stop(){stopSound();playing=false;$("play").textContent="Play";if($("status").textContent=="Playing…")setStatus(looping?"Stopped (loop on).":"Stopped.")}
@@ -314,6 +355,28 @@ $("reset").onclick=()=>{
     resetArm=setTimeout(()=>{resetArm=null;$("reset").textContent=RESET_LABEL},4000);return}
   clearTimeout(resetArm);resetArm=null;$("reset").textContent=RESET_LABEL;
   $("lib").value=DEFAULT_LIB;$("startsrc").value=DEFAULT_STARTS;renderStarts();renderGroups();stop();round=null;save();setStatus("Defaults restored.")};
+
+function ioMsg(t,err){const m=$("iomsg");m.textContent=t;m.style.color=err?"var(--bad)":"";setStatus(t,err)}
+function applyState(o){
+  if(!o||typeof o!="object"||(typeof o.lib!="string"&&typeof o.starts!="string"&&!o.synth))throw new Error("this does not look like an exported settings file.");
+  if(typeof o.lib=="string")$("lib").value=o.lib;
+  if(typeof o.starts=="string")$("startsrc").value=o.starts;
+  if(typeof o.fa=="string")$("fa").value=o.fa;
+  if(typeof o.fb=="string")$("fb").value=o.fb;
+  if(o.rev!=null&&!isNaN(+o.rev))$("reverb").value=Math.min(100,Math.max(0,+o.rev));
+  if(o.synth)loadSynth(o.synth);
+  renderSoundMenu(typeof o.sound=="string"?o.sound:$("sound").value);
+  if(+o.revLen>=.3&&+o.revLen<=8){revLen=+o.revLen;if(bus)bus.conv.buffer=impulse(revLen,2.4)}
+  renderStarts();renderGroups();renderSynth();setRev();stop();round=null;save()}
+$("export").onclick=()=>{
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(state(),null,2)],{type:"application/json"}));
+  a.download="ear-training-settings.json";document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);ioMsg("Exported ear-training-settings.json")};
+$("import").onclick=()=>$("importfile").click();
+$("importfile").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;
+  try{applyState(JSON.parse(await f.text()));ioMsg("Imported settings from "+f.name+".")}
+  catch(err){ioMsg("Import failed: "+err.message,true)}};
 </script>
 </body>
 </html>
