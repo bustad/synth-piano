@@ -5,84 +5,124 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ear training</title>
 <style>
-:root{--bg:#fafaf8;--fg:#1d1d1b;--mut:#6b6b66;--card:#fff;--line:#d8d8d2;--acc:#2f6fdb;--accfg:#fff;--bad:#c0392b}
-@media (prefers-color-scheme:dark){:root{--bg:#181817;--fg:#ececE8;--mut:#9a9a94;--card:#222220;--line:#3a3a36;--acc:#6aa0ff;--accfg:#10131a;--bad:#ff7b6b}}
+:root{--bg:#f4f5f8;--fg:#1c2030;--mut:#667085;--card:#fff;--line:#e3e6ee;--acc:#3b64e0;--accfg:#fff;--bad:#c0392b;
+ --soft:color-mix(in srgb,var(--acc) 10%,transparent);--shadow:0 1px 2px rgba(20,25,50,.06),0 4px 14px rgba(20,25,50,.05);--field:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#12141b;--fg:#e8eaf2;--mut:#98a0b4;--card:#1b1e28;--line:#2d3242;--acc:#7b9bff;--accfg:#0c1020;--bad:#ff7b6b;
+ --soft:color-mix(in srgb,var(--acc) 16%,transparent);--shadow:0 1px 2px rgba(0,0,0,.4);--field:#151822}}
 *{box-sizing:border-box}
-body{margin:0;padding:20px;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,sans-serif;max-width:960px;margin-inline:auto}
-h1{font-size:20px;margin:0 0 14px}h2{font-size:14px;margin:18px 0 6px;color:var(--mut);font-weight:600}
-.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media(max-width:620px){.cols{grid-template-columns:1fr}}
+body{margin:0;padding:24px 16px 48px;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,"Segoe UI",Roboto,sans-serif;max-width:980px;margin-inline:auto}
+header{margin:4px 2px 18px}
+h1{font-size:26px;letter-spacing:-.02em;margin:0}
+.sub{margin:2px 0 0;color:var(--mut)}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;margin:0 0 10px;color:var(--mut);font-weight:700}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin:0 0 16px;box-shadow:var(--shadow)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:640px){.cols{grid-template-columns:1fr}}
 label{font-weight:600;font-size:13px}
-textarea,input[type=number]{width:100%;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px;font:inherit}
-textarea{min-height:70px;resize:vertical}
-#lib{min-height:200px;font:13px/1.4 ui-monospace,Menlo,monospace}
-.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0}
-button{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer}
-button.p{background:var(--acc);color:var(--accfg);border-color:var(--acc)}
-button.on{outline:2px solid var(--acc)}
-#status{min-height:1.4em;color:var(--mut)}#status.err{color:var(--bad)}
-#answer{padding:10px 12px;border:1px dashed var(--line);border-radius:8px;display:none;margin-top:8px}
-table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden}
-th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);font-size:14px}
-tbody tr{cursor:pointer}tbody tr:hover{background:color-mix(in srgb,var(--acc) 12%,transparent)}
-.tempo{width:80px}
-.scroll{max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--card)}
-.scroll table{border:0;border-radius:0}
+.fl{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.badge{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:7px;font-size:12px;font-weight:700;color:var(--accfg);background:var(--acc)}
+.badge.b{background:color-mix(in srgb,var(--acc) 55%,#e08a3b)}
+textarea,input[type=number],input[type=text],select{background:var(--field);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font:inherit;transition:border-color .15s,box-shadow .15s}
+textarea,input[type=number]{width:100%}
+textarea{min-height:68px;resize:vertical}
+textarea:focus,input:focus,select:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--soft)}
+#lib{min-height:220px;font:13px/1.45 ui-monospace,Menlo,Consolas,monospace}
+#startsrc{min-height:150px;font:13px/1.45 ui-monospace,Menlo,Consolas,monospace}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+.transport{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px 0 4px}
+.spacer{flex:1}
+button{background:var(--field);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:8px 14px;font:inherit;font-weight:500;cursor:pointer;transition:background .15s,border-color .15s,transform .05s}
+button:hover{border-color:var(--acc);background:var(--soft)}
+button:active{transform:translateY(1px)}
+button:focus-visible,summary:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+button.p{background:var(--acc);color:var(--accfg);border-color:var(--acc);font-weight:700;min-width:96px;padding:11px 22px;font-size:16px;box-shadow:0 2px 8px color-mix(in srgb,var(--acc) 35%,transparent)}
+button.p:hover{filter:brightness(1.07);background:var(--acc)}
+button.tog.on{background:var(--soft);border-color:var(--acc);color:var(--acc);font-weight:700}
+.seg{display:inline-flex}
+.seg button{border-radius:0}
+.seg button:first-child{border-radius:10px 0 0 10px}
+.seg button:last-child{border-radius:0 10px 10px 0;margin-left:-1px}
+#status{min-height:1.5em;color:var(--mut);margin-top:10px}#status.err{color:var(--bad)}
+#answer{padding:11px 14px;border-left:4px solid var(--acc);background:var(--soft);border-radius:10px;display:none;margin-top:8px}
+.ctls{display:flex;flex-wrap:wrap;gap:18px 26px;align-items:flex-end}
+.ctl{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em}
+.ctl input[type=number],.ctl select{text-transform:none;letter-spacing:0;color:var(--fg);font-size:15px;font-weight:400}
+.tempo{width:84px}
+input[type=range]{accent-color:var(--acc);width:150px;height:34px;margin:0}
+.inl{display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-size:14px}
+table{width:100%;border-collapse:collapse;background:var(--card)}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);font-size:14px}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
+tbody tr:last-child td{border-bottom:0}
+tbody tr{cursor:pointer}tbody tr:hover{background:var(--soft)}
+.scroll{max-height:290px;overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
 .scroll thead th{position:sticky;top:0;background:var(--card);box-shadow:0 1px 0 var(--line)}
 .scroll th:first-child,.scroll td:first-child{width:2.6em;color:var(--mut)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:8px 0}
-.grid label{font-weight:400;font-size:12px;display:flex;flex-direction:column;gap:2px}
-.oscs{margin:8px 0;max-width:640px}
-.oscs input,.oscs select{width:100%;padding:5px}
-#synthui{padding:6px 0}
-input[type=text]{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:7px;font:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:10px 0}
+.grid label{font-weight:500;font-size:12px;color:var(--mut);display:flex;flex-direction:column;gap:3px}
+.oscs{margin:10px 0;max-width:660px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.oscs input,.oscs select{width:100%;padding:5px 8px}
+#synthui{padding:6px 0 2px}
 .grid label[title],.oscs th[title]{cursor:help}
-.chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{padding:3px 10px;font-size:13px;border-radius:999px}
-.chip small{color:var(--mut)}
-select{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:7px;font:inherit}
-.note{color:var(--mut);font-size:13px;margin:4px 0}
-details{margin:8px 0}summary{cursor:pointer;color:var(--mut);font-size:13px}
-code{background:var(--card);padding:0 4px;border-radius:4px}
-#startsrc{min-height:140px;font:13px/1.4 ui-monospace,Menlo,monospace}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin:6px 0 4px}
+.chip{padding:4px 12px;font-size:13px;border-radius:999px;background:var(--soft);border-color:transparent}
+.chip:hover{border-color:var(--acc)}
+.chip small{color:var(--mut);margin-left:3px}
+.note{color:var(--mut);font-size:13px;margin:4px 0 8px}
+details{margin:12px 0 2px}
+summary{cursor:pointer;color:var(--fg);font-weight:600;font-size:14px;list-style:none;display:inline-flex;align-items:center;gap:6px;padding:4px 0}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"\25B8";color:var(--mut);transition:transform .15s;display:inline-block}
+details[open]>summary::before{transform:rotate(90deg)}
+code{background:var(--soft);padding:1px 6px;border-radius:6px;font-size:12.5px}
 </style>
 </head>
 <body>
-<h1>Ear training: which field was played?</h1>
+<header><h1>Ear training</h1><p class="sub">Listen, then decide which field was played.</p></header>
 
-<div class="cols">
-  <div><label for="fa">Field A (group names, comma separated)</label><textarea id="fa"></textarea></div>
-  <div><label for="fb">Field B</label><textarea id="fb"></textarea></div>
-</div>
+<section class="card">
+  <div class="cols">
+    <div><label class="fl" for="fa"><span class="badge">A</span>Field A</label><textarea id="fa" placeholder="Group names, separated by commas"></textarea></div>
+    <div><label class="fl" for="fb"><span class="badge b">B</span>Field B</label><textarea id="fb" placeholder="Group names, separated by commas"></textarea></div>
+  </div>
+  <div class="transport">
+    <button class="p" id="play">Play</button>
+    <button class="tog" id="loop">Loop: off</button>
+    <button class="tog" id="transpose">Transpose: off</button>
+    <span class="spacer"></span>
+    <span class="seg"><button id="guessA">It was A</button><button id="guessB">It was B</button></span>
+    <button id="reveal">Reveal</button>
+    <button id="next">Next round</button>
+  </div>
+  <div id="status"></div>
+  <div id="answer"></div>
+</section>
 
-<div class="bar">
-  <button class="p" id="play">Play</button>
-  <button id="loop">Loop: off</button>
-  <button id="transpose">Transpose: off</button>
-  <button id="guessA">It was A</button>
-  <button id="guessB">It was B</button>
-  <button id="reveal">Reveal</button>
-  <button id="next">Next round</button>
-  <span>Tempo <input class="tempo" id="tempo" type="number" value="100" min="40" max="240"> bpm</span>
-  <span>Sound <select id="sound"><option value="keys">Keys</option><option value="pad">Soft pad</option><option value="organ">Organ</option></select></span>
-  <span>Reverb <input id="reverb" type="range" min="0" max="100" value="35" style="vertical-align:middle;width:110px"></span>
-</div>
-<div id="status"></div>
-<div id="answer"></div>
+<section class="card">
+  <h2>Sound</h2>
+  <div class="ctls">
+    <label class="ctl">Tempo<span class="inl"><input class="tempo" id="tempo" type="number" value="100" min="40" max="240"> bpm</span></label>
+    <label class="ctl">Sound<select id="sound"><option value="keys">Keys</option><option value="pad">Soft pad</option><option value="organ">Organ</option><option value="strings">Strings</option></select></label>
+    <label class="ctl">Reverb<input id="reverb" type="range" min="0" max="100" value="35"></label>
+  </div>
+  <details id="synthd"><summary>Synth settings</summary><div id="synthui"></div></details>
+</section>
 
-<details id="synthd"><summary>Synth settings</summary><div id="synthui"></div></details>
+<section class="card">
+  <h2>Starting points</h2>
+  <p class="note">Click a row to load it into the fields.</p>
+  <div class="scroll"><table><thead><tr><th>#</th><th>Description</th><th>Field A</th><th>Field B</th></tr></thead><tbody id="starts"></tbody></table></div>
+  <details><summary>Edit starting points</summary>
+  <p class="note">One row per line: <code>field A | field B | description</code> (the description is optional). Separate several groups within a field with commas. Lines starting with # are ignored.</p>
+  <textarea id="startsrc" spellcheck="false"></textarea></details>
+</section>
 
-<h2>Starting points (click a row to load it)</h2>
-<div class="scroll"><table><thead><tr><th>#</th><th>Description</th><th>Field A</th><th>Field B</th></tr></thead><tbody id="starts"></tbody></table></div>
-<details><summary>Edit starting points</summary>
-<p class="note">One row per line: <code>field A | field B | description</code> (the description is optional). Separate several groups within a field with commas. Lines starting with # are ignored.</p>
-<textarea id="startsrc" spellcheck="false"></textarea></details>
-
-<h2>Available groups <span style="font-weight:400">(click one to add it to the field you edited last)</span></h2>
-<div id="groups" class="chips"></div>
-
-<details id="libd"><summary>Edit library</summary>
-<p class="note"><b>How to edit:</b> a line like <code>[Major triad]</code> starts a group, and every line below it is one variant the page may pick at random. Notes: <code>C4</code> is middle C; use # or b for accidentals (<code>F#3</code>, <code>Bb3</code>). <code>/2</code> sets the length in beats (default 1, decimals like <code>/.5</code> work). <code>+</code> plays notes together (<code>C4+E4+G4/3</code>), a space moves to the next note, and <code>R/1</code> is a rest. Lines starting with # are comments. Use the group names in the A and B fields (case is ignored).</p>
+<section class="card">
+  <h2>Library</h2>
+  <p class="note">Available groups. Click one to add it to the field you edited last.</p>
+  <div id="groups" class="chips"></div>
+  <details id="libd"><summary>Edit library</summary>
+  <p class="note"><b>How to edit:</b> a line like <code>[Major triad]</code> starts a group, and every line below it is one variant the page may pick at random. Notes: <code>C4</code> is middle C; use # or b for accidentals (<code>F#3</code>, <code>Bb3</code>). <code>/2</code> sets the length in beats (default 1, decimals like <code>/.5</code> work). <code>+</code> plays notes together (<code>C4+E4+G4/3</code>), a space moves to the next note, and <code>R/1</code> is a rest. Lines starting with # are comments. Use the group names in the A and B fields (case is ignored).</p>
 <textarea id="lib" spellcheck="false">
 # Notes: C4 = middle C, # and b for accidentals. /n = beats. + = together. R = rest.
 [Minor 2nd up]
@@ -141,9 +181,14 @@ G3/.5 A3/.5 B3/.5 C4/.5 D4/.5 E4/.5 F#4/.5 G4/2
 D4/.5 E4/.5 F4/.5 G4/.5 A4/.5 B4/.5 C5/.5 D5/2
 C4/.5 D4/.5 Eb4/.5 F4/.5 G4/.5 A4/.5 Bb4/.5 C5/2
 </textarea>
-</details>
-<div class="bar"><button id="reset">Reset library and starting points to defaults</button><button id="export">Export settings</button><button id="import">Import settings</button><input type="file" id="importfile" accept=".json,application/json" hidden><span class="note" id="iomsg"></span></div>
-<p class="note">Everything you edit is saved automatically in this browser. Export saves it all to a file you can keep, share, or import in another browser.</p>
+  </details>
+</section>
+
+<section class="card">
+  <h2>Your data</h2>
+  <div class="bar" style="margin-top:0"><button id="export">Export settings</button><button id="import">Import settings</button><button id="reset">Reset library and starting points to defaults</button><input type="file" id="importfile" accept=".json,application/json" hidden><span class="note" id="iomsg"></span></div>
+  <p class="note" style="margin-bottom:0">Everything you edit is saved automatically in this browser. Export saves it all to a file you can keep, share, or import in another browser.</p>
+</section>
 
 <script>
 const $=id=>document.getElementById(id);
@@ -158,7 +203,7 @@ Minor 2nd up, Major 2nd up | Major 2nd up, Minor 2nd up | Order of small interva
 Major scale up | Dorian scale up | Scale colour: lowered 3rd and 7th in Dorian
 Min7 chord, Dom7 chord | Dom7 chord, Min7 chord | Order of seventh chords`;
 const KEY="eartrain.v1";
-function state(){return{app:"ear-training",version:1,lib:$("lib").value,starts:$("startsrc").value,fa:$("fa").value,fb:$("fb").value,sound:$("sound").value,rev:$("reverb").value,synth:PRESETS,revLen}}
+function state(){return{app:"ear-training",version:1,lib:$("lib").value,starts:$("startsrc").value,fa:$("fa").value,fb:$("fb").value,sound:$("sound").value,rev:$("reverb").value,synth:PRESETS,synthV:2,revLen}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(state()))}catch(e){}}
 function load(){try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return {}}}
 const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
@@ -190,7 +235,8 @@ function setStatus(t,err){const s=$("status");s.textContent=t;s.className=err?"e
 const PRESETS={
  keys:{name:"Keys",osc:[["sawtooth",1,-6,.4],["sawtooth",1,6,.4],["triangle",1,0,.9],["sine",2,0,.15]],fc:[7,2.2],fcT:.45,atk:.006,dec:1.1,sus:.22,rel:.4},
  pad:{name:"Soft pad",osc:[["sawtooth",1,-12,.4],["sawtooth",1,12,.4],["sine",1,0,.6]],fc:[3.2,3.2],fcT:.1,atk:.14,dec:.3,sus:.85,rel:.6},
- organ:{name:"Organ",osc:[["sine",1,0,.6],["sine",2,0,.4],["sine",3,0,.2],["sine",4,0,.1]],fc:[20,20],fcT:.1,atk:.02,dec:.1,sus:1,rel:.15}
+ organ:{name:"Organ",osc:[["sine",1,0,.6],["sine",2,0,.4],["sine",3,0,.2],["sine",4,0,.1]],fc:[20,20],fcT:.1,atk:.02,dec:.1,sus:1,rel:.15},
+ strings:{name:"Strings",osc:[["sawtooth",1,-12,.3,-.7],["sawtooth",1,-4,.3,-.25],["sawtooth",1,4,.3,.25],["sawtooth",1,12,.3,.7],["sine",1,0,.3,0]],fc:[2.2,3.5],fca:.35,fcp:5,fcT:.5,fcr:0,q:.6,atk:.18,dec:.4,sus:.85,rel:.55,chm:.6,chr:.5,chd:4}
 };
 let bus=null;
 function impulse(dur,decay){const sr=ctx.sampleRate,n=Math.floor(sr*dur),b=ctx.createBuffer(2,n,sr);
@@ -198,10 +244,22 @@ function impulse(dur,decay){const sr=ctx.sampleRate,n=Math.floor(sr*dur),b=ctx.c
     for(let i=0;i<n;i++){const x=i/n;lp+=((Math.random()*2-1)-lp)*(1-.85*x);d[i]=lp*Math.pow(1-x,decay)}}
   return b}
 function makeBus(){
-  const input=ctx.createGain(),dry=ctx.createGain(),wet=ctx.createGain(),conv=ctx.createConvolver(),comp=ctx.createDynamicsCompressor();
+  const input=ctx.createGain(),cout=ctx.createGain(),dryC=ctx.createGain(),dry=ctx.createGain(),wet=ctx.createGain(),
+        conv=ctx.createConvolver(),comp=ctx.createDynamicsCompressor(),voices=[];
   conv.buffer=impulse(revLen,2.4);
-  input.connect(dry);dry.connect(comp);input.connect(conv);conv.connect(wet);wet.connect(comp);comp.connect(ctx.destination);
-  bus={input,dry,wet,conv};setRev()}
+  input.connect(dryC);dryC.connect(cout);
+  for(const [base,pan,rm] of [[.014,-.8,1],[.018,0,1.13],[.022,.8,.87]]){
+    const d=ctx.createDelay(.1),pn=ctx.createStereoPanner(),w=ctx.createGain(),lfo=ctx.createOscillator(),lg=ctx.createGain();
+    d.delayTime.value=base;pn.pan.value=pan;w.gain.value=0;lg.gain.value=0;lfo.type="sine";lfo.frequency.value=.6*rm;
+    lfo.connect(lg);lg.connect(d.delayTime);lfo.start();
+    input.connect(d);d.connect(pn);pn.connect(w);w.connect(cout);voices.push({lfo,lg,w,rm})}
+  cout.connect(dry);cout.connect(conv);
+  dry.connect(comp);conv.connect(wet);wet.connect(comp);comp.connect(ctx.destination);
+  bus={input,dry,wet,conv,dryC,voices};setRev()}
+function setChorus(P){if(!bus)return;
+  const m=Math.min(1,Math.max(0,+P.chm||0)),r=Math.max(.05,+P.chr||.6),d=Math.min(.008,Math.max(0,(+P.chd||0)/1000)),t=ctx.currentTime;
+  bus.dryC.gain.setTargetAtTime(1-.4*m,t,.02);
+  for(const v of bus.voices){v.w.gain.setTargetAtTime(m*.7,t,.02);v.lfo.frequency.setTargetAtTime(r*v.rm,t,.02);v.lg.gain.setTargetAtTime(d,t,.02)}}
 function setRev(){if(!bus)return;const v=$("reverb").value/100;
   bus.wet.gain.setTargetAtTime(v*1.3,ctx.currentTime,.03);bus.dry.gain.setTargetAtTime(1-.3*v,ctx.currentTime,.03)}
 const DEFP=JSON.parse(JSON.stringify(PRESETS));
@@ -218,30 +276,36 @@ function renderSoundMenu(sel){
   $("sound").innerHTML=Object.entries(PRESETS).map(([k,P])=>`<option value="${esc(k)}">${esc(P.name||k)}</option>`).join("");
   $("sound").value=PRESETS[sel]?sel:Object.keys(PRESETS)[0]}
 function pMsg(t){const m=$("pmsg");if(m)m.textContent=t}
-if(saved.synth)loadSynth(saved.synth);
+if(saved.synth){loadSynth(saved.synth);if(!(saved.synthV>=2)&&!PRESETS.strings)PRESETS.strings=JSON.parse(JSON.stringify(DEFP.strings))}
 const NUM=[
  ["atk","Attack (s)",0,2,.001,"Attack: how long a note takes to fade in from silence to full volume. Short sounds percussive, long sounds soft and swelling."],
  ["dec","Decay (s)",.02,5,.01,"Decay: how long the volume takes to fall from its peak to the sustain level. Short sounds plucked, long sounds lingering."],
  ["sus","Sustain (0-1)",0,1,.01,"Sustain: the volume a held note settles on after the decay, relative to its peak. 0 means it dies away completely, 1 means it stays at full volume."],
  ["rel","Release (s)",.02,3,.01,"Release: how long a note takes to fade out after its written length ends. Longer is smoother and lets notes overlap."],
- ["fc0","Filter start (x pitch)",1,20,.1,"Filter start: where the low-pass filter cuts off at the start of each note, as a multiple of the note pitch. Higher means a brighter attack."],
- ["fc1","Filter end (x pitch)",1,20,.1,"Filter end: the cutoff the filter moves toward as the note continues. Lower than the start makes the note mellower over time. Equal to the start gives a steady tone."],
- ["fcT","Filter speed (s)",.02,3,.01,"Filter speed: how quickly the cutoff moves from start to end (a time constant in seconds). Small is fast, large is slow."],
- ["q","Resonance",.1,12,.1,"Resonance: boosts the frequencies right at the filter cutoff (roughly in dB). About 0.7 is neutral. 2 to 6 gives a vocal, wah-like character as the cutoff sweeps. High values sound nasal or ringing. Keep it low for the clearest pitch."]
+ ["fc0","Filter start (x pitch)",1,20,.1,"Filter start: where the low-pass filter cuts off at the moment a note starts, as a multiple of the note pitch. It is also the level the cutoff returns to during the filter release."],
+ ["fca","Filter attack (s)",0,3,.01,"Filter attack: how long the cutoff takes to rise from the start level to the filter peak. 0 means no attack: the note starts at the start level and the peak setting is ignored. Longer values give a slow, swelling brightness."],
+ ["fcp","Filter peak (x pitch)",1,20,.1,"Filter peak: the cutoff reached at the end of the filter attack, as a multiple of the note pitch. It only has an effect when the filter attack is above 0."],
+ ["fcT","Filter decay (s)",.02,3,.01,"Filter decay: how quickly the cutoff moves from the peak (or from the start, if there is no attack) to the filter sustain level. A time constant in seconds. Small is fast, large is slow."],
+ ["fc1","Filter sustain (x pitch)",1,20,.1,"Filter sustain: the cutoff the filter settles on while the note is held, as a multiple of the note pitch. Lower than the start or peak makes the note mellower over time. Equal gives a steady tone."],
+ ["fcr","Filter release (s)",0,3,.01,"Filter release: how long the cutoff takes to move back to the filter start level after the note ends. 0 turns it off, which leaves the cutoff where it was."],
+ ["q","Resonance",.1,12,.1,"Resonance: boosts the frequencies right at the filter cutoff (roughly in dB). About 0.7 is neutral. 2 to 6 gives a vocal, wah-like character as the cutoff sweeps. High values sound nasal or ringing. Keep it low for the clearest pitch."],
+ ["chm","Chorus mix (0-1)",0,1,.01,"Chorus mix: how much of the chorus effect is blended in (0 is off). The chorus thickens the sound with three slightly delayed copies whose delay wobbles, spread across left and right. Strong chorus makes the pitch harder to judge. Applies when the next Play starts."],
+ ["chr","Chorus rate (Hz)",.05,5,.05,"Chorus rate: how fast the delay time wobbles, in cycles per second. Slow (0.3 to 1) sounds like an ensemble, fast sounds like vibrato."],
+ ["chd","Chorus depth (ms)",0,8,.1,"Chorus depth: how far the delay time wobbles, in milliseconds. More depth gives a wider, more detuned shimmer."]
 ];
-const OT=["Wave: the shape of this oscillator. Sine is a pure tone, triangle is soft, sawtooth is bright and buzzy, square is hollow. Off mutes the row.","Pitch multiple: 1 is the written pitch, 2 is an octave up, 0.5 an octave down, 3 an octave plus a fifth up.","Detune: fine tuning in cents (100 cents is one semitone). Small opposite detunes on two oscillators give a richer, chorus-like sound.","Level: the volume of this oscillator relative to the others."];
-const getv=(P,k)=>k=="fc0"?P.fc[0]:k=="fc1"?P.fc[1]:P[k];
+const OT=["Wave: the shape of this oscillator. Sine is a pure tone, triangle is soft, sawtooth is bright and buzzy, square is hollow. Off mutes the row.","Pitch multiple: 1 is the written pitch, 2 is an octave up, 0.5 an octave down, 3 an octave plus a fifth up.","Detune: fine tuning in cents (100 cents is one semitone). Small opposite detunes on two oscillators give a richer, chorus-like sound.","Level: the volume of this oscillator relative to the others.","Pan: the stereo position of this oscillator, from -1 (left) to 1 (right). Spreading detuned oscillators left and right makes the sound wider."];
+const getv=(P,k)=>k=="fc0"?P.fc[0]:k=="fc1"?P.fc[1]:k=="fcp"?(P.fcp>0?P.fcp:P.fc[0]):(P[k]==null?0:P[k]);
 const setv=(P,k,v)=>{if(k=="fc0")P.fc[0]=v;else if(k=="fc1")P.fc[1]=v;else P[k]=v};
 function renderSynth(){
-  const P=PRESETS[$("sound").value];if(P.q==null)P.q=.7;while(P.osc.length<4)P.osc.push(["off",1,0,0]);
+  const P=PRESETS[$("sound").value];if(P.q==null)P.q=.7;if(P.chm==null)P.chm=0;if(P.chr==null)P.chr=.6;if(P.chd==null)P.chd=3;while(P.osc.length<5)P.osc.push(["off",1,0,0,0]);
   clearTimeout(delArm);delArm=null;
   let h=`<div class="bar" style="margin:6px 0"><label style="font-weight:400">Name <input id="pname" type="text" value="${esc(P.name||"")}" style="width:12em"></label><button id="prename">Rename</button><button id="pnew">Save as new sound</button><button id="pdel">Delete</button><button id="prestore">Restore built-in sounds</button><span class="note" id="pmsg"></span></div><p class="note">Settings for the selected sound ("Sound" menu above). Changes apply from the next Play. Hover over a setting for an explanation.</p><div class="grid">`;
   for(const [k,l,mn,mx,st,tip] of NUM)h+=`<label title="${tip}">${l}<input type="number" data-k="${k}" min="${mn}" max="${mx}" step="${st}" value="${getv(P,k)}"></label>`;
   h+=`<label title="Reverb length: how long the reverb tail lasts, in seconds. Shorter is clearer, longer sounds like a bigger room."><span>Reverb length (s)</span><input type="number" id="revlen" min="0.3" max="8" step="0.1" value="${revLen}"></label></div>`;
-  h+=`<table class="oscs"><thead><tr><th>Osc</th><th title="${OT[0]}">Wave</th><th title="${OT[1]}">Pitch x</th><th title="${OT[2]}">Detune (cents)</th><th title="${OT[3]}">Level</th></tr></thead><tbody>`;
+  h+=`<table class="oscs"><thead><tr><th>Osc</th><th title="${OT[0]}">Wave</th><th title="${OT[1]}">Pitch x</th><th title="${OT[2]}">Detune (cents)</th><th title="${OT[3]}">Level</th><th title="${OT[4]}">Pan</th></tr></thead><tbody>`;
   P.osc.forEach((o,i)=>{
-    const ni=(f,mn,mx,st)=>`<td><input title="${OT[f]}" type="number" data-o="${i}" data-f="${f}" min="${mn}" max="${mx}" step="${st}" value="${o[f]}"></td>`;
-    h+=`<tr><td>${i+1}</td><td><select title="${OT[0]}" data-o="${i}" data-f="0">${["off","sine","triangle","sawtooth","square"].map(w=>`<option${w==o[0]?" selected":""}>${w}</option>`).join("")}</select></td>${ni(1,.25,8,"any")}${ni(2,-100,100,1)}${ni(3,0,1.5,.05)}</tr>`});
+    const ni=(f,mn,mx,st)=>`<td><input title="${OT[f]}" type="number" data-o="${i}" data-f="${f}" min="${mn}" max="${mx}" step="${st}" value="${o[f]??0}"></td>`;
+    h+=`<tr><td>${i+1}</td><td><select title="${OT[0]}" data-o="${i}" data-f="0">${["off","sine","triangle","sawtooth","square"].map(w=>`<option${w==o[0]?" selected":""}>${w}</option>`).join("")}</select></td>${ni(1,.25,8,"any")}${ni(2,-100,100,1)}${ni(3,0,1.5,.05)}${ni(4,-1,1,.1)}</tr>`});
   h+=`</tbody></table>${DEFP[$("sound").value]?'<button id="synthreset">Reset this sound to default</button>':''}`;
   $("synthui").innerHTML=h}
 function synthEdit(e){const t=e.target,P=PRESETS[$("sound").value],v=parseFloat(t.value);
@@ -306,20 +370,25 @@ function play(at){
   if(!cont){stopSound();master=ctx.createGain();master.gain.value=.8;master.connect(bus.input)}
   const beat=60/Math.max(40,+$("tempo").value||100),t0=cont?Math.max(at,ctx.currentTime+.03):ctx.currentTime+.2;
   const endT=t0+round.len*beat;
+  setChorus(PRESETS[$("sound").value]||Object.values(PRESETS)[0]);
   for(const e of round.ev){
     const P=PRESETS[$("sound").value]||Object.values(PRESETS)[0];
     const f=440*Math.pow(2,(e.m-69)/12),s=t0+e.t*beat,end=Math.max(s+.2,s+e.d*beat),pk=.3/Math.sqrt(e.c);
     const g=ctx.createGain();g.connect(master);
     const fl=ctx.createBiquadFilter();fl.type="lowpass";fl.Q.value=P.q||.7;fl.connect(g);
-    fl.frequency.setValueAtTime(Math.min(f*P.fc[0],12000),s);
-    fl.frequency.setTargetAtTime(Math.min(f*P.fc[1],12000),s,P.fcT);
+    const cap=x=>Math.min(x*f,12000),fa=P.fca>0?P.fca:0,fr=P.fcr>0?P.fcr:0;
+    let ds=s;
+    fl.frequency.setValueAtTime(cap(P.fc[0]),s);
+    if(fa>0){fl.frequency.exponentialRampToValueAtTime(cap(P.fcp>0?P.fcp:P.fc[0]),s+fa);ds=s+fa}
+    fl.frequency.setTargetAtTime(cap(P.fc[1]),ds,P.fcT);
+    if(fr>0&&end>ds)fl.frequency.setTargetAtTime(cap(P.fc[0]),end,fr/3);
     g.gain.setValueAtTime(0,s);
     g.gain.linearRampToValueAtTime(pk,s+P.atk);
     g.gain.setTargetAtTime(pk*P.sus,s+P.atk,P.dec/3);
     g.gain.setTargetAtTime(0,end,P.rel/3);
-    for(const [type,mul,det,vol] of P.osc){if(type=="off"||!(vol>0))continue;
+    for(const r of P.osc){const [type,mul,det,vol]=r,pan=+r[4]||0;if(type=="off"||!(vol>0))continue;
       const o=ctx.createOscillator(),v=ctx.createGain();v.gain.value=vol;
-      o.type=type;o.frequency.value=f*mul;o.detune.value=det;o.connect(v);v.connect(fl);o.start(s);o.stop(end+P.rel*4+.1)}}
+      o.type=type;o.frequency.value=f*mul;o.detune.value=det;o.connect(v);if(pan){const pn=ctx.createStereoPanner();pn.pan.value=Math.max(-1,Math.min(1,pan));v.connect(pn);pn.connect(fl)}else v.connect(fl);o.start(s);o.stop(end+P.rel*4+.1)}}
   playing=true;$("play").textContent="Stop";
   setStatus("Playing…");
   clearTimeout(timer);
@@ -364,7 +433,7 @@ function applyState(o){
   if(typeof o.fa=="string")$("fa").value=o.fa;
   if(typeof o.fb=="string")$("fb").value=o.fb;
   if(o.rev!=null&&!isNaN(+o.rev))$("reverb").value=Math.min(100,Math.max(0,+o.rev));
-  if(o.synth)loadSynth(o.synth);
+  if(o.synth){loadSynth(o.synth);if(!(o.synthV>=2)&&!PRESETS.strings)PRESETS.strings=JSON.parse(JSON.stringify(DEFP.strings))}
   renderSoundMenu(typeof o.sound=="string"?o.sound:$("sound").value);
   if(+o.revLen>=.3&&+o.revLen<=8){revLen=+o.revLen;if(bus)bus.conv.buffer=impulse(revLen,2.4)}
   renderStarts();renderGroups();renderSynth();setRev();stop();round=null;save()}

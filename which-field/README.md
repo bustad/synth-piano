@@ -29,7 +29,7 @@ Fields can hold one name or several. Comparing "Major triad" with "Minor triad" 
 | **Reveal** | Shows which field was played, the transposition, and which example was chosen from each group, without guessing. |
 | **Next round** | Discards the current round and starts a new one. |
 | **Tempo** | Speed in beats per minute. |
-| **Sound** | Which synth sound to use: Keys (electric-piano style), Soft pad and Organ, plus any sounds you create. Applies from the next Play. |
+| **Sound** | Which synth sound to use: Keys (electric-piano style), Soft pad, Organ and Strings, plus any sounds you create. Applies from the next Play. |
 | **Reverb** | How much reverb you hear. You can move it while playing. |
 
 Replaying or looping always uses the same pick until you press **Next round**. Editing the fields, the library or turning Transpose on or off also discards the current round.
@@ -95,8 +95,9 @@ The page doesn't read MIDI files. If you have MIDI examples, write the notes int
 Open **Synth settings** to see and change how the selected sound is built. Each sound keeps its own settings. Hover over any setting (or a column heading in the oscillator table) to see a short explanation.
 
 - **Envelope:** attack, decay, sustain and release.
-- **Filter:** where the low-pass filter starts and ends (as a multiple of each note's pitch), how fast it closes, and its resonance.
-- **Oscillators:** four rows, each with a wave shape (off, sine, triangle, sawtooth, square), a pitch multiple, a detune in cents and a level.
+- **Filter:** a low-pass filter with its own envelope. **Start** is the cutoff when a note begins (as a multiple of the note's pitch). With an **attack** above 0 it rises to the **peak**, then **decays** (at the speed set by the decay time) to the **sustain** level while the note is held, and a **release** above 0 moves it back to the start level after the note ends. With attack 0 and release 0, which is the default, it simply glides from start to sustain. **Resonance** boosts the frequencies around the cutoff.
+- **Oscillators:** five rows, each with a wave shape (off, sine, triangle, sawtooth, square), a pitch multiple, a detune in cents, a level and a pan position from -1 (left) to 1 (right).
+- **Chorus:** an ensemble effect that mixes in three slightly delayed copies whose delay wobbles, spread across the stereo field. Set its mix (0 is off), rate in hertz and depth in milliseconds. Each sound has its own chorus settings, which apply when the next Play starts. Strong chorus makes pitch harder to judge, so keep it modest for ear training.
 - **Reverb length** in seconds. This changes the reverb straight away. All other changes apply from the next Play.
 
 The sounds themselves are editable too. Use the name box and buttons at the top of the section:
@@ -104,7 +105,7 @@ The sounds themselves are editable too. Use the name box and buttons at the top 
 - **Rename** changes the selected sound's name.
 - **Save as new sound** copies the selected sound, with the name in the box, so you can experiment without losing the original.
 - **Delete** removes the selected sound (click twice to confirm). At least one sound must remain.
-- **Restore built-in sounds** brings back any of Keys, Soft pad and Organ that you deleted.
+- **Restore built-in sounds** brings back any of Keys, Soft pad, Organ and Strings that you deleted.
 - **Reset this sound to default** (built-in sounds only) restores the selected sound's original values. It doesn't touch the other sounds.
 
 ## Saving
