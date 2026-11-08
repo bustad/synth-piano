@@ -1,6 +1,6 @@
 # The Web Audio behind Synth Workshop
 
-This document explains how `synth-workshop.html` makes sound. It follows the code in the file, so you can read the two side by side. Everything uses built-in Web Audio nodes. There are no libraries and no AudioWorklets.
+This document explains how `synth-workshop` makes sound. It follows the code in the file, so you can read the two side by side. Everything uses built-in Web Audio nodes. There are no libraries and no AudioWorklets.
 
 ## 1. The big picture
 
