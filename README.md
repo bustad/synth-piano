@@ -4,7 +4,7 @@ A single-file, browser-based synth piano with a built-in sight-singing trainer. 
 
 ## Getting started
 
-1. Save `index.html` anywhere on your computer.
+1. Save `piano.html` anywhere on your computer.
 2. Open it in a modern desktop or mobile browser (it uses the Web Audio API, which current versions of Chrome, Edge, Firefox and Safari support).
 3. Click or tap a key. Browsers only allow audio after a user gesture, so sound starts on your first interaction.
 
@@ -19,13 +19,22 @@ It works offline and has no dependencies.
 - Middle C is marked **Do** on the keyboard.
 
 ### Sounds (22)
-Choose from the **Sound** menu. Piano sounds decay naturally; synth and retro sounds hold while the key is down and fade on release.
+Choose from the **Sound** menu. Piano sounds decay naturally; synth and retro sounds hold while the key is down and fade on release. Your own saved sounds appear in a "My sounds" group.
 
 | Group | Sounds |
 |---|---|
 | Pianos | Grand piano, Grand piano (brighter), Bright piano, Mellow piano, Electric piano, Honky-tonk, Music box |
 | Synths | Warm pad, Glass pad, Square lead, Synth brass, Organ, Synth pluck, Vibrato lead |
 | Retro synths | Chiptune square, 8-bit triangle, Moog-style lead, 80s poly synth, String machine, Supersaw, Sync-style lead, Wobble bass |
+
+### Sound editor
+Open **Sound editor** under the keyboard to edit the sound chosen in the Sound menu. Changes apply to the next note you play and are remembered with your other settings.
+- **Oscillators:** up to 8 per sound, each with a waveform, pitch multiple, detune in **cents**, level and stereo **pan** (-1 to 1).
+- **Amplitude ADSR:** attack, decay, sustain and release, plus an option for higher notes to decay faster (the piano sounds use this).
+- **Filter ADSR:** start, attack, peak, decay, sustain and release for the low-pass filter, with cutoffs set as multiples of the note's pitch, optional caps and floors in Hz, and resonance.
+- **Stereo chorus:** mix, rate and depth. The chorus is shared by all notes, so it follows the sound you play with the keys.
+- **LFOs:** vibrato (depth, rate, fade-in) and filter wobble (rate, depth); set the depth to 0 to switch them off.
+- **Managing sounds:** rename a sound, save a copy as a new sound, delete it (click twice), reset a built-in sound, or restore deleted built-ins.
 
 ### Reverb and volume
 - Convolution reverb using an impulse response generated in code (decaying, progressively darker stereo noise).
@@ -39,8 +48,9 @@ Choose from the **Sound** menu. Piano sounds decay naturally; synth and retro so
 - The keys on screen never move; only the sounding pitch changes, and only for notes played afterwards.
 
 ### Saved settings
-- Your settings are remembered automatically between visits using the browser's local storage: sound, reverb mix, room size, volume, transpose, octave, the selected practice notes, tempo, Play sound, sound delay, max leap, the "show the lit note" option, and the drone's octave, sound and level.
+- Your settings are remembered automatically between visits using the browser's local storage: sound, your edits and your own sounds, reverb mix, room size, volume, transpose, octave, the selected practice notes, tempo, Play sound, sound delay, max leap, the "show the lit note" option, and the drone's octave, sound and level.
 - The drone and the trainer always start switched off.
+- **Export settings** downloads everything that is saved (settings, edited built-in sounds and your own sounds) as one `.json` file. **Import settings** loads such a file and replaces the current settings; it checks every value, so a damaged or hand-edited file can't break the page. Use these for backups, for moving to another browser or computer, or when the browser can't store settings.
 - **Reset all settings** (at the bottom of the page) clears the saved settings and restores the defaults.
 - Settings are stored per browser and per file location, so opening the file from a different folder or browser starts fresh, and clearing your browser data erases them. If the browser blocks storage (for example in a private window, or inside some preview panes), the page still works but says that settings can't be saved.
 

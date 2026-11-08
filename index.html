@@ -52,6 +52,17 @@
   .links li { margin:4px 0; }
   .links a { color:var(--accent); }
   .links .empty { margin:4px 0; opacity:.7; font-style:italic; }
+  .editor { width:100%; max-width:1000px; background:var(--panel); border-radius:12px; padding:6px 22px 18px; font-size:.85rem; }
+  .editor summary { cursor:pointer; font-weight:600; font-size:1.05rem; padding:12px 0; }
+  .ebar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:6px 0; }
+  .ebar label { flex-direction:row; align-items:center; gap:6px; }
+  .editor input[type=text] { width:12em; background:var(--bg); color:var(--fg); border:1px solid var(--accent); border-radius:8px; padding:6px 8px; }
+  #pmsg, .enote { font-size:.8rem; opacity:.8; }
+  .egrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:10px; margin:10px 0; }
+  .editor input[type=number] { width:100%; }
+  .oscs { border-collapse:collapse; width:100%; margin-top:6px; }
+  .oscs th, .oscs td { padding:3px 6px 3px 0; text-align:left; font-weight:400; }
+  .oscs input[type=number] { width:6.5em; }
   .memory { margin:0; font-size:.8rem; opacity:.85; text-align:center; }
   .memory button { padding:4px 10px; font-size:.8rem; margin-left:6px; }
   kbd { background:var(--bg); border:1px solid var(--accent); border-radius:4px; padding:0 5px; font-size:.85em; }
@@ -98,36 +109,7 @@
     <label>Room size <input id="size" type="range" min="0.5" max="6" step="0.1" value="2.8"></label>
     <label>Volume <input id="vol" type="range" min="0" max="100" value="70"></label>
     <label>Sound
-      <select id="inst">
-        <optgroup label="Pianos">
-          <option value="grand">Grand piano</option>
-          <option value="grand2">Grand piano (brighter)</option>
-          <option value="bright">Bright piano</option>
-          <option value="mellow">Mellow piano</option>
-          <option value="electric">Electric piano</option>
-          <option value="honky">Honky-tonk</option>
-          <option value="musicbox">Music box</option>
-        </optgroup>
-        <optgroup label="Synths">
-          <option value="pad">Warm pad</option>
-          <option value="glass">Glass pad</option>
-          <option value="lead">Square lead</option>
-          <option value="brass">Synth brass</option>
-          <option value="organ">Organ</option>
-          <option value="pluck">Synth pluck</option>
-          <option value="vibrato">Vibrato lead</option>
-        </optgroup>
-        <optgroup label="Retro synths">
-          <option value="chip">Chiptune square</option>
-          <option value="nes">8-bit triangle</option>
-          <option value="moog">Moog-style lead</option>
-          <option value="juno">80s poly synth</option>
-          <option value="strings">String machine</option>
-          <option value="supersaw">Supersaw</option>
-          <option value="sync">Sync-style lead</option>
-          <option value="wobble">Wobble bass</option>
-        </optgroup>
-      </select>
+      <select id="inst"></select>
     </label>
     <label>Transpose
       <span class="tr">
@@ -187,6 +169,11 @@
 
   <div class="wrap"><div class="keyboard"><div class="inner" id="kb"></div></div></div>
 
+  <details class="editor" id="editor">
+    <summary>Sound editor</summary>
+    <div id="synthui"></div>
+  </details>
+
   <div class="lower">
   <section class="ladder" aria-label="Solfege ladder">
     <h2>Solfege ladder</h2>
@@ -233,8 +220,11 @@
     <h3>Drone</h3>
     <p>Press <b>Drone</b> to hold a steady Do (the note C) while you sing. Choose its octave, pick any sustaining sound and set its level. The drone follows <b>Transpose</b>, so it always stays on your Do, but it ignores the <b>Octave</b> setting, which only moves the keys. Singing against a drone makes it much easier to hear whether you are in tune with home. A quiet, pure sound such as Organ, Glass pad or 8-bit triangle works well.</p>
 
+    <h3>Sound editor</h3>
+    <p>Open the <b>Sound editor</b> under the keyboard to change the sound chosen in the Sound menu. Each sound has up to 8 oscillators (waveform, pitch multiple, detune in cents, level and stereo pan), an amplitude envelope (attack, decay, sustain, release), a filter envelope (start, attack, peak, decay, sustain, release) and a stereo chorus. Changes apply to the next note you play. You can rename a sound, save a copy as a new sound, delete it, or reset it to the built-in version, and your edits are remembered with your other settings.</p>
+
     <h3>Saved settings</h3>
-    <p>Your settings (sound, reverb, volume, transpose, octave, selected notes, tempo, delay, max leap and the drone options) are remembered automatically in this browser and come back the next time you open the page. The drone and the trainer always start switched off. <b>Reset all settings</b> at the bottom clears the memory and restores the defaults.</p>
+    <p>Your settings (sound, reverb, volume, transpose, octave, selected notes, tempo, delay, max leap and the drone options) are remembered automatically in this browser and come back the next time you open the page. The drone and the trainer always start switched off. <b>Export settings</b> at the bottom saves everything (settings, edited sounds and your own sounds) to a file you can keep as a backup or open on another computer with <b>Import settings</b>. <b>Reset all settings</b> clears the memory and restores the defaults.</p>
 
     <h3>Tips</h3>
     <p>Start with two or three notes at a slow tempo and a long delay, then add notes and speed up. Use
@@ -255,14 +245,18 @@
     </ul>
   </section>
 
-  <p class="memory"><span id="memStatus"></span> <button id="resetBtn">Reset all settings</button></p>
+  <p class="memory"><span id="memStatus"></span>
+    <button id="exportBtn">Export settings</button> <button id="importBtn">Import settings</button>
+    <button id="resetBtn">Reset all settings</button>
+    <input type="file" id="importFile" accept=".json,application/json" hidden>
+    <br><span id="ioMsg"></span></p>
 
 <script>
 const START = 48;            // C3
 const OCTAVES = 3;
 const WHITE = [0,2,4,5,7,9,11];
 const BLACK_AFTER = {0:1, 1:3, 3:6, 4:8, 5:10};   // white index in octave -> semitone offset
-let ctx, bus, dry, wet, convolver, master, droneGain;
+let ctx, bus, dry, wet, convolver, master, droneGain, chorus;
 const STORE_KEY = "synthPianoSightSinging.v1";
 let loadingSettings = true;   // suppress saving while settings are being restored
 
@@ -278,15 +272,41 @@ function initAudio() {
   dry = ctx.createGain();
   wet = ctx.createGain();
   convolver = ctx.createConvolver();
-  bus.connect(dry).connect(master);
-  bus.connect(convolver).connect(wet).connect(master);
+  chorus = makeChorus();
+  chorus.out.connect(dry).connect(master);
+  chorus.out.connect(convolver).connect(wet).connect(master);
 
   makeReverb(parseFloat(sizeEl.value));
   droneGain = ctx.createGain(); droneGain.connect(bus);
-  applyMix(); applyVol(); applyDroneLevel();
+  applyMix(); applyVol(); applyDroneLevel(); setChorus(inst);
 }
 
 // Generate a stereo impulse response: decaying noise, progressively darkened
+// Three slightly delayed copies whose delay times wobble, spread left / centre / right
+function makeChorus() {
+  const out = ctx.createGain(), dryC = ctx.createGain(), voices = [];
+  bus.connect(dryC).connect(out);
+  for (const [base, pan, rm] of [[.014, -.8, 1], [.018, 0, 1.13], [.022, .8, .87]]) {
+    const d = ctx.createDelay(.1), pn = ctx.createStereoPanner(), w = ctx.createGain(),
+          lfo = ctx.createOscillator(), lg = ctx.createGain();
+    d.delayTime.value = base; pn.pan.value = pan; w.gain.value = 0; lg.gain.value = 0; lfo.frequency.value = .6 * rm;
+    lfo.connect(lg); lg.connect(d.delayTime); lfo.start();
+    bus.connect(d); d.connect(pn); pn.connect(w); w.connect(out);
+    voices.push({ lfo, lg, w, rm });
+  }
+  return { out, dryC, voices };
+}
+function setChorus(P) {
+  if (!chorus || !P) return;
+  const m = Math.min(1, Math.max(0, +P.chm || 0)), r = Math.max(.05, +P.chr || .6),
+        d = Math.min(.008, Math.max(0, (+P.chd || 0) / 1000)), t = ctx.currentTime;
+  chorus.dryC.gain.setTargetAtTime(1 - .4 * m, t, .02);
+  chorus.voices.forEach(v => {
+    v.w.gain.setTargetAtTime(m * .7, t, .02);
+    v.lfo.frequency.setTargetAtTime(r * v.rm, t, .02);
+    v.lg.gain.setTargetAtTime(d, t, .02);
+  });
+}
 function makeReverb(seconds) {
   const rate = ctx.sampleRate, len = Math.floor(rate * seconds);
   const ir = ctx.createBuffer(2, len, rate);
@@ -317,115 +337,95 @@ const voices = {};          // id -> voice
 let transpose = 0;          // semitones (changed by the Random button)
 let octaveShift = -1;       // octaves (independent of Random)
 
-// Sound presets: partials are [frequency multiple, waveform, relative level]
-const INSTRUMENTS = {
-  grand:    { parts:[[1,"triangle",1],[2,"sine",.45],[3,"sine",.2],[4,"sine",.1],[1.003,"sine",.35]],
-              f0:12, f1:3,  fmax0:10000, fmax1:4000,  decBase:6.5, decMin:1.6, att:.006 },
-  // Same family of timbre as "grand", but with more upper partials and a filter that never closes below a
-  // floor (fmin0/fmin1), so low notes stay bright instead of going dark.
-  grand2:   { parts:[[1,"triangle",1],[2,"sine",.55],[3,"sine",.3],[4,"sine",.16],[5,"sine",.08],[6,"sine",.04],
-                     [1.003,"sine",.35]], gain:.9,
-              f0:16, f1:5, fmax0:12000, fmax1:7000, fmin0:3500, fmin1:1500, decBase:6.5, decMin:1.6, att:.005 },
-  bright:   { parts:[[1,"sawtooth",.5],[2,"sine",.5],[3,"sine",.3],[4,"sine",.2],[1.002,"triangle",.4]],
-              f0:16, f1:5,  fmax0:12000, fmax1:6000,  decBase:5.5, decMin:1.4, att:.004 },
-  mellow:   { parts:[[1,"sine",1],[2,"sine",.25],[3,"sine",.08],[1.002,"sine",.3]],
-              f0:6,  f1:2,  fmax0:5000,  fmax1:2000,  decBase:5,   decMin:1.4, att:.01 },
-  electric: { parts:[[1,"sine",1],[2,"sine",.3],[4,"sine",.08],[7,"sine",.05],[1.005,"sine",.25]],
-              f0:8,  f1:4,  fmax0:9000,  fmax1:5000,  decBase:4,   decMin:1.2, att:.004 },
-  honky:    { parts:[[1,"triangle",1],[1.012,"triangle",.8],[.988,"triangle",.6],[2,"sine",.3],[3,"sine",.15]],
-              f0:10, f1:3,  fmax0:9000,  fmax1:4000,  decBase:4,   decMin:1.2, att:.005 },
-  musicbox: { parts:[[1,"sine",1],[4.01,"sine",.25],[6.3,"sine",.1]],
-              f0:20, f1:20, fmax0:14000, fmax1:14000, decBase:2.6, decMin:.8,  att:.002 },
-  // --- synths (these sustain while the key is held) ---
-  pad:      { parts:[[1,"sawtooth",.5],[1.006,"sawtooth",.5],[.994,"sawtooth",.5],[.5,"sine",.4]],
-              f0:4,  f1:2.5, fmax0:3500, fmax1:2500, decBase:6, decMin:2, att:.35, sus:.8, susT:.5, rel:.3 },
-  glass:    { parts:[[1,"sine",1],[2,"sine",.5],[3,"sine",.35],[5,"sine",.15],[1.003,"sine",.5]],
-              f0:10, f1:8,  fmax0:9000, fmax1:8000, decBase:6, decMin:2, att:.25, sus:.85, susT:.4, rel:.4 },
-  lead:     { parts:[[1,"square",.6],[1.004,"square",.4]],
-              f0:6,  f1:4,  fmax0:6000, fmax1:4500, decBase:6, decMin:2, att:.01, sus:.7, susT:.1, rel:.08 },
-  brass:    { parts:[[1,"sawtooth",1],[1.007,"sawtooth",.8]],
-              f0:2,  f1:8,  fmax0:2500, fmax1:7000, fRamp:.2, decBase:6, decMin:2, att:.05, sus:.8, susT:.2, rel:.1 },
-  organ:    { parts:[[1,"sine",1],[2,"sine",.8],[3,"sine",.5],[4,"sine",.3],[.5,"sine",.5]],
-              f0:12, f1:12, fmax0:10000, fmax1:10000, decBase:6, decMin:2, att:.012, sus:1, susT:.02, rel:.05 },
-  pluck:    { parts:[[1,"sawtooth",1],[1.005,"sawtooth",.7]],
-              f0:14, f1:1.5, fmax0:12000, fmax1:3000, fRamp:.35, decBase:1.8, decMin:.6, att:.003 },
-  // --- retro synths ---
-  chip:     { parts:[[1,"square",1]], gain:.55,
-              f0:20, f1:20, fmax0:16000, fmax1:16000, decBase:6, decMin:2, att:.003, sus:.85, susT:.005, rel:.03 },
-  nes:      { parts:[[1,"triangle",1]], gain:.9,
-              f0:20, f1:20, fmax0:16000, fmax1:16000, decBase:6, decMin:2, att:.003, sus:1, susT:.005, rel:.02 },
-  moog:     { parts:[[1,"sawtooth",1],[1.003,"sawtooth",.6],[.5,"square",.6]], q:6, gain:.8,
-              f0:1.5, f1:5, fmax0:1500, fmax1:5000, fRamp:.25, decBase:6, decMin:2, att:.01, sus:.85, susT:.15, rel:.1 },
-  juno:     { parts:[[1,"sawtooth",.6],[1.008,"sawtooth",.6],[.992,"sawtooth",.6],[1,"square",.4],[.5,"square",.4]], gain:.8,
-              f0:5, f1:3, fmax0:4500, fmax1:3000, decBase:6, decMin:2, att:.06, sus:.75, susT:.3, rel:.25 },
-  strings:  { parts:[[1,"sawtooth",.5],[1.01,"sawtooth",.5],[.99,"sawtooth",.5],[2,"sawtooth",.2],[1.005,"sawtooth",.3]], gain:.8,
-              f0:3.5, f1:3, fmax0:3500, fmax1:3000, decBase:6, decMin:2, att:.5, sus:.9, susT:.4, rel:.6 },
-  supersaw: { parts:[[1,"sawtooth",.5],[1.012,"sawtooth",.5],[.988,"sawtooth",.5],[1.025,"sawtooth",.4],[.975,"sawtooth",.4]], gain:.7,
-              f0:8, f1:6, fmax0:9000, fmax1:7000, decBase:6, decMin:2, att:.02, sus:.85, susT:.2, rel:.15 },
-  sync:     { parts:[[1,"sawtooth",1],[1.004,"sawtooth",.5]], q:9, gain:.7,
-              f0:14, f1:3, fmax0:9000, fmax1:2500, fRamp:.5, decBase:6, decMin:2, att:.01, sus:.8, susT:.1, rel:.1 },
-  wobble:   { parts:[[1,"sawtooth",1],[.5,"square",.8],[1.004,"sawtooth",.5]], q:5, gain:.7,
-              f0:3, f1:3, fmax0:2500, fmax1:2500, wob:{ rate:3.5, depth:.85 },
-              decBase:6, decMin:2, att:.01, sus:.9, susT:.05, rel:.1 },
-  vibrato:  { parts:[[1,"triangle",1],[2,"sine",.3],[1.003,"sawtooth",.35]], gain:.9,
-              f0:6, f1:4, fmax0:6000, fmax1:4500, vib:{ rate:5.5, cents:28, delay:.25 },
-              decBase:6, decMin:2, att:.04, sus:.85, susT:.1, rel:.15 }
+// Built-in sounds. osc rows: [waveform, pitch multiple, detune in cents, level, pan -1..1].
+// Amplitude ADSR: atk, dec, sus, rel. Filter ADSR (cutoffs as multiples of the note's pitch): fc0, fca, fcp, fcT, fc1, fcr.
+const DEFAULTS = {
+  grand: {"name":"Grand piano","group":"Pianos","osc":[["triangle",1,0,1,0],["sine",2,0,0.45,0],["sine",3,0,0.2,0],["sine",4,0,0.1,0],["sine",1,5.2,0.35,0]],"atk":0.006,"dec":2.275,"decMin":0.56,"dtrk":0.019444,"sus":0,"rel":0.36,"fc0":12,"fca":0,"fcp":0,"fcT":0.4,"fc1":3,"fcr":0,"fmax0":10000,"fmax1":4000,"fmin0":0,"fmin1":0,"q":0.5,"gain":1,"chm":0,"chr":0.6,"chd":3,"vibC":0,"vibR":5.5,"vibD":0.25,"wobR":3.5,"wobD":0},
+  grand2: {"name":"Grand piano (brighter)","group":"Pianos","osc":[["triangle",1,0,1,0],["sine",2,0,0.55,0],["sine",3,0,0.3,0],["sine",4,0,0.16,0],["sine",5,0,0.08,0],["sine",6,0,0.04,0],["sine",1,5.2,0.35,0]],"atk":0.005,"dec":2.275,"decMin":0.56,"dtrk":0.019444,"sus":0,"rel":0.36,"fc0":16,"fca":0,"fcp":0,"fcT":0.4,"fc1":5,"fcr":0,"fmax0":12000,"fmax1":7000,"fmin0":3500,"fmin1":1500,"q":0.5,"gain":0.9,"chm":0,"chr":0.6,"chd":3,"vibC":0,"vibR":5.5,"vibD":0.25,"wobR":3.5,"wobD":0},
+  bright: {"name":"Bright piano","group":"Pianos","osc":[["sawtooth",1,0,0.5,0],["sine",2,0,0.5,0],["sine",3,0,0.3,0],["sine",4,0,0.2,0],["triangle",1,3.5,0.4,0]],"atk":0.004,"dec":1.925,"decMin":0.49,"dtrk":0.019444,"sus":0,"rel":0.36,"fc0":16,"fca":0,"fcp":0,"fcT":0.4,"fc1":5,"fcr":0,"fmax0":12000,"fmax1":6000,"fmin0":0,"fmin1":0,"q":0.5,"gain":1,"chm":0,"chr":0.6,"chd":3,"vibC":0,"vibR":5.5,"vibD":0.25,"wobR":3.5,"wobD":0},
+  mellow: {"name":"Mellow piano","group":"Pianos","osc":[["sine",1,0,1,0],["sine",2,0,0.25,0],["sine",3,0,0.08,0],["sine",1,3.5,0.3,0]],"atk":0.01,"dec":1.75,"decMin":0.49,"dtrk":0.019444,"sus":0,"rel":0.36,"fc0":6,"fca":0,"fcp":0,"fcT":0.4,"fc1":2,"fcr":0,"fmax0":5000,"fmax1":2000,"fmin0":0,"fmin1":0,"q":0.5,"gain":1,"chm":0,"chr":0.6,"chd":3,"vibC":0,"vibR":5.5,"vibD":0.25,"wobR":3.5,"wobD":0},
+  electric: {"name":"Electric piano","group":"Pianos","osc":[["sine",1,0,1,0],["sine",2,0,0.3,0],["sine",4,0,0.08,0],["sine",7,0,0.05,0],["sine",1,8.6,0.25,0]],"atk":0.004,"dec":1.4,"decMin":0.42,"dtrk":0.019444,"sus":0,"rel":0.36,"fc0":8,"fca":0,"fcp":0,"fcT":0.4,"fc1":4,"fcr":0,"fmax0":9000,"fmax1":5000,"fmin0":0,"fmin1":0,"q":0.5,"gain":1,"chm":0,"chr":0.6,"chd":3,"vibC":0,"vibR":5.5,"vibD":0.25,"wobR":3.5,"wobD":0},
+  honky: {"name":"Honky-tonk","group":"Pianos","osc":[["triangle",1,0,1,0],["triangle",1,20.7,0.8,0],["triangle",1,-20.9,0.6,0],["sine",2,0,0.3,0],["sine",3,0,0.15,0]],"atk":0.005,"dec":1.4,"decMin":0.42,"dtrk":0.019444,"sus":0,"rel":0.36,"fc0":10,"fca":0,"fcp":0,"fcT":0.4,"fc1":3,"fcr":0,"fmax0":9000,"fmax1":4000,"fmin0":0,"fmin1":0,"q":0.5,"gain":1,"chm":0,"chr":0.6,"chd":3,"vibC":0,"vibR":5.5,"vibD":0.25,"wobR":3.5,"wobD":0},
+  musicbox: {"name":"Music box","group":"Pianos","osc":[["sine",1,0,1,0],["sine",4.01,0,0.25,0],["sine",6.3,0,0.1,0]],"atk":0.002,"dec":0.91,"decMin":0.28,"dtrk":0.019444,"sus":0,"rel":0.36,"fc0":20,"fca":0,"fcp":0,"fcT":0.4,"fc1":20,"fcr":0,"fmax0":14000,"fmax1":14000,"fmin0":0,"fmin1":0,"q":0.5,"gain":1,"chm":0,"chr":0.6,"chd":3,"vibC":0,"vibR":5.5,"vibD":0.25,"wobR":3.5,"wobD":0},
+  pad: {"name":"Warm pad","group":"Synths","osc":[["sawtooth",1,0,0.5,0],["sawtooth",1,10.4,0.5,0.6],["sawtooth",1,-10.4,0.5,-0.6],["sine",0.5,0,0.4,0]],"atk":0.35,"dec":1.5,"decMin":0.02,"dtrk":0,"sus":0.8,"rel":0.9,"fc0":4,"fca":0,"fcp":0,"fcT":0.4,"fc1":2.5,"fcr":0,"fmax0":3500,"fmax1":2500,"fmin0":0,"fmin1":0,"q":0.5,"gain":1,"chm":0,"chr":0.6,"chd":3,"vibC":0,"vibR":5.5,"vibD":0.25,"wobR":3.5,"wobD":0},
+  glass: {"name":"Glass pad","group":"Synths","osc":[["sine",1,0,1,0],["sine",2,0,0.5,0],["sine",3,0,0.35,0],["sine",5,0,0.15,0],["sine",1,5.2,0.5,0]],"atk":0.25,"dec":1.2,"decMin":0.02,"dtrk":0,"sus":0.85,"rel":1.2,"fc0":10,"fca":0,"fcp":0,"fcT":0.4,"fc1":8,"fcr":0,"fmax0":9000,"fmax1":8000,"fmin0":0,"fmin1":0,"q":0.5,"gain":1,"chm":0,"chr":0.6,"chd":3,"vibC":0,"vibR":5.5,"vibD":0.25,"wobR":3.5,"wobD":0},
+  lead: {"name":"Square lead","group":"Synths","osc":[["square",1,0,0.6,0],["square",1,6.9,0.4,0]],"atk":0.01,"dec":0.3,"decMin":0.02,"dtrk":0,"sus":0.7,"rel":0.24,"fc0":6,"fca":0,"fcp":0,"fcT":0.4,"fc1":4,"fcr":0,"fmax0":6000,"fmax1":4500,"fmin0":0,"fmin1":0,"q":0.5,"gain":1,"chm":0,"chr":0.6,"chd":3,"vibC":0,"vibR":5.5,"vibD":0.25,"wobR":3.5,"wobD":0},
+  brass: {"name":"Synth brass","group":"Synths","osc":[["sawtooth",1,0,1,0],["sawtooth",1,12.1,0.8,0]],"atk":0.05,"dec":0.6,"decMin":0.02,"dtrk":0,"sus":0.8,"rel":0.3,"fc0":2,"fca":0,"fcp":0,"fcT":0.067,"fc1":8,"fcr":0,"fmax0":2500,"fmax1":7000,"fmin0":0,"fmin1":0,"q":0.5,"gain":1,"chm":0,"chr":0.6,"chd":3,"vibC":0,"vibR":5.5,"vibD":0.25,"wobR":3.5,"wobD":0},
+  organ: {"name":"Organ","group":"Synths","osc":[["sine",1,0,1,0],["sine",2,0,0.8,0],["sine",3,0,0.5,0],["sine",4,0,0.3,0],["sine",0.5,0,0.5,0]],"atk":0.012,"dec":0.06,"decMin":0.02,"dtrk":0,"sus":1,"rel":0.15,"fc0":12,"fca":0,"fcp":0,"fcT":0.4,"fc1":12,"fcr":0,"fmax0":10000,"fmax1":10000,"fmin0":0,"fmin1":0,"q":0.5,"gain":1,"chm":0,"chr":0.6,"chd":3,"vibC":0,"vibR":5.5,"vibD":0.25,"wobR":3.5,"wobD":0},
+  pluck: {"name":"Synth pluck","group":"Synths","osc":[["sawtooth",1,0,1,0],["sawtooth",1,8.6,0.7,0]],"atk":0.003,"dec":0.63,"decMin":0.21,"dtrk":0.019444,"sus":0,"rel":0.36,"fc0":14,"fca":0,"fcp":0,"fcT":0.117,"fc1":1.5,"fcr":0,"fmax0":12000,"fmax1":3000,"fmin0":0,"fmin1":0,"q":0.5,"gain":1,"chm":0,"chr":0.6,"chd":3,"vibC":0,"vibR":5.5,"vibD":0.25,"wobR":3.5,"wobD":0},
+  chip: {"name":"Chiptune square","group":"Retro synths","osc":[["square",1,0,1,0]],"atk":0.003,"dec":0.015,"decMin":0.02,"dtrk":0,"sus":0.85,"rel":0.09,"fc0":20,"fca":0,"fcp":0,"fcT":0.4,"fc1":20,"fcr":0,"fmax0":16000,"fmax1":16000,"fmin0":0,"fmin1":0,"q":0.5,"gain":0.55,"chm":0,"chr":0.6,"chd":3,"vibC":0,"vibR":5.5,"vibD":0.25,"wobR":3.5,"wobD":0},
+  nes: {"name":"8-bit triangle","group":"Retro synths","osc":[["triangle",1,0,1,0]],"atk":0.003,"dec":0.015,"decMin":0.02,"dtrk":0,"sus":1,"rel":0.06,"fc0":20,"fca":0,"fcp":0,"fcT":0.4,"fc1":20,"fcr":0,"fmax0":16000,"fmax1":16000,"fmin0":0,"fmin1":0,"q":0.5,"gain":0.9,"chm":0,"chr":0.6,"chd":3,"vibC":0,"vibR":5.5,"vibD":0.25,"wobR":3.5,"wobD":0},
+  moog: {"name":"Moog-style lead","group":"Retro synths","osc":[["sawtooth",1,0,1,0],["sawtooth",1,5.2,0.6,0],["square",0.5,0,0.6,0]],"atk":0.01,"dec":0.45,"decMin":0.02,"dtrk":0,"sus":0.85,"rel":0.3,"fc0":1.5,"fca":0,"fcp":0,"fcT":0.083,"fc1":5,"fcr":0,"fmax0":1500,"fmax1":5000,"fmin0":0,"fmin1":0,"q":6,"gain":0.8,"chm":0,"chr":0.6,"chd":3,"vibC":0,"vibR":5.5,"vibD":0.25,"wobR":3.5,"wobD":0},
+  juno: {"name":"80s poly synth","group":"Retro synths","osc":[["sawtooth",1,0,0.6,0],["sawtooth",1,13.8,0.6,0.496],["sawtooth",1,-13.9,0.6,-0.5],["square",1,0,0.4,0],["square",0.5,0,0.4,0]],"atk":0.06,"dec":0.9,"decMin":0.02,"dtrk":0,"sus":0.75,"rel":0.75,"fc0":5,"fca":0,"fcp":0,"fcT":0.4,"fc1":3,"fcr":0,"fmax0":4500,"fmax1":3000,"fmin0":0,"fmin1":0,"q":0.5,"gain":0.8,"chm":0.4,"chr":0.6,"chd":3,"vibC":0,"vibR":5.5,"vibD":0.25,"wobR":3.5,"wobD":0},
+  strings: {"name":"String machine","group":"Retro synths","osc":[["sawtooth",1,0,0.5,0],["sawtooth",1,17.2,0.5,0.692],["sawtooth",1,-17.4,0.5,-0.7],["sawtooth",2,0,0.2,0],["sawtooth",1,8.6,0.3,0.346]],"atk":0.5,"dec":1.2,"decMin":0.02,"dtrk":0,"sus":0.9,"rel":1.8,"fc0":3.5,"fca":0,"fcp":0,"fcT":0.4,"fc1":3,"fcr":0,"fmax0":3500,"fmax1":3000,"fmin0":0,"fmin1":0,"q":0.5,"gain":0.8,"chm":0.5,"chr":0.5,"chd":4,"vibC":0,"vibR":5.5,"vibD":0.25,"wobR":3.5,"wobD":0},
+  supersaw: {"name":"Supersaw","group":"Retro synths","osc":[["sawtooth",1,0,0.5,0],["sawtooth",1,20.7,0.5,0.378],["sawtooth",1,-20.9,0.5,-0.382],["sawtooth",1,42.7,0.4,0.78],["sawtooth",1,-43.8,0.4,-0.8]],"atk":0.02,"dec":0.6,"decMin":0.02,"dtrk":0,"sus":0.85,"rel":0.45,"fc0":8,"fca":0,"fcp":0,"fcT":0.4,"fc1":6,"fcr":0,"fmax0":9000,"fmax1":7000,"fmin0":0,"fmin1":0,"q":0.5,"gain":0.7,"chm":0,"chr":0.6,"chd":3,"vibC":0,"vibR":5.5,"vibD":0.25,"wobR":3.5,"wobD":0},
+  sync: {"name":"Sync-style lead","group":"Retro synths","osc":[["sawtooth",1,0,1,0],["sawtooth",1,6.9,0.5,0]],"atk":0.01,"dec":0.3,"decMin":0.02,"dtrk":0,"sus":0.8,"rel":0.3,"fc0":14,"fca":0,"fcp":0,"fcT":0.167,"fc1":3,"fcr":0,"fmax0":9000,"fmax1":2500,"fmin0":0,"fmin1":0,"q":9,"gain":0.7,"chm":0,"chr":0.6,"chd":3,"vibC":0,"vibR":5.5,"vibD":0.25,"wobR":3.5,"wobD":0},
+  wobble: {"name":"Wobble bass","group":"Retro synths","osc":[["sawtooth",1,0,1,0],["square",0.5,0,0.8,0],["sawtooth",1,6.9,0.5,0]],"atk":0.01,"dec":0.15,"decMin":0.02,"dtrk":0,"sus":0.9,"rel":0.3,"fc0":3,"fca":0,"fcp":0,"fcT":0.4,"fc1":3,"fcr":0,"fmax0":2500,"fmax1":2500,"fmin0":0,"fmin1":0,"q":5,"gain":0.7,"chm":0,"chr":0.6,"chd":3,"vibC":0,"vibR":5.5,"vibD":0.25,"wobR":3.5,"wobD":0.85},
+  vibrato: {"name":"Vibrato lead","group":"Synths","osc":[["triangle",1,0,1,0],["sine",2,0,0.3,0],["sawtooth",1,5.2,0.35,0]],"atk":0.04,"dec":0.3,"decMin":0.02,"dtrk":0,"sus":0.85,"rel":0.45,"fc0":6,"fca":0,"fcp":0,"fcT":0.4,"fc1":4,"fcr":0,"fmax0":6000,"fmax1":4500,"fmin0":0,"fmin1":0,"q":0.5,"gain":0.9,"chm":0,"chr":0.6,"chd":3,"vibC":28,"vibR":5.5,"vibD":0.25,"wobR":3.5,"wobD":0}
 };
+const INSTRUMENTS = JSON.parse(JSON.stringify(DEFAULTS));   // live copy, changed by the sound editor
 let inst = INSTRUMENTS.grand;
-document.getElementById("inst").onchange = e => { inst = INSTRUMENTS[e.target.value]; };
 
 function noteOn(midi, id, o = {}) {      // o: optional { inst, sounding, dest } (used by the drone)
   initAudio();
   if (voices[id]) return;
-  const sounding = o.sounding != null ? o.sounding : midi + transpose + octaveShift * 12;           // transposed pitch; key display stays put
+  const I = o.inst || inst;
+  const sounding = o.sounding != null ? o.sounding : midi + transpose + octaveShift * 12;   // transposed pitch; key display stays put
   const f = 440 * 2 ** ((sounding - 69) / 12);
   const now = ctx.currentTime;
+  if (!o.inst) setChorus(I);                          // the shared chorus follows the keyboard sound
 
-  const env = ctx.createGain();       // attack/decay
-  const rel = ctx.createGain();       // release
+  // Filter with its own ADSR; cutoffs are multiples of the note's pitch
   const filt = ctx.createBiquadFilter();
-  filt.type = "lowpass";
-  filt.Q.value = 0.5;  // set per sound below
-  const I = o.inst || inst;
-  filt.Q.value = I.q || 0.5;
-  filt.frequency.setValueAtTime(Math.max(Math.min(f * I.f0, I.fmax0), I.fmin0 || 0), now);
-  filt.frequency.exponentialRampToValueAtTime(Math.max(Math.min(f * I.f1, I.fmax1), I.fmin1 || 0), now + (I.fRamp || 1.2));
+  filt.type = "lowpass"; filt.Q.value = I.q;
+  const cutA = x => Math.max(Math.min(f * x, I.fmax0), I.fmin0);      // start and peak
+  const cutS = x => Math.max(Math.min(f * x, I.fmax1), I.fmin1);      // sustain
+  const fStart = cutA(I.fc0);
+  filt.frequency.setValueAtTime(fStart, now);
+  let ds = now;
+  if (I.fca > 0) { filt.frequency.exponentialRampToValueAtTime(cutA(I.fcp > 0 ? I.fcp : I.fc0), now + I.fca); ds = now + I.fca; }
+  filt.frequency.setTargetAtTime(cutS(I.fc1), ds, I.fcT);
 
-  const dec = Math.max(I.decMin, I.decBase - sounding / 18);
+  // Amplitude ADSR (the release is applied by releaseVoice)
+  const env = ctx.createGain(), rel = ctx.createGain();
+  const dec = Math.max(I.decMin, I.dec - I.dtrk * sounding);
   env.gain.setValueAtTime(0.0001, now);
-  env.gain.linearRampToValueAtTime(0.55, now + I.att);
-  if (I.sus) env.gain.setTargetAtTime(0.55 * I.sus, now + I.att, I.susT);   // synths hold while the key is down
-  else env.gain.exponentialRampToValueAtTime(0.0001, now + dec);
+  env.gain.linearRampToValueAtTime(0.55, now + I.atk);
+  env.gain.setTargetAtTime(0.55 * I.sus, now + I.atk, dec / 3);
 
-  // Harmonic partials give a piano-like timbre
-  const parts = I.parts.filter(p => f * p[0] < 18000);
-  const norm = 0.84 / I.parts.reduce((a, p) => a + p[2], 0);   // keeps loudness similar across sounds
-  const oscs = parts.map(([mult, type, amp]) => {
-    const o = ctx.createOscillator(), g = ctx.createGain();
-    o.type = type; o.frequency.value = f * mult; g.gain.value = amp * norm * (I.gain || 1);
-    o.connect(g).connect(filt); o.start(now);
-    return o;
-  });
-  if (I.vib) {                                   // delayed pitch vibrato
+  // Oscillators: pitch multiple, detune in cents, level, pan
+  const rows = I.osc.filter(r => r[0] !== "off" && r[3] > 0);
+  const norm = 0.84 / (rows.reduce((a, r) => a + r[3], 0) || 1);   // keeps loudness similar across sounds
+  const oscs = [];
+  for (const [type, mul, cents, lvl, pan] of rows) {
+    if (f * mul >= 18000) continue;
+    const os = ctx.createOscillator(), g = ctx.createGain();
+    os.type = type; os.frequency.value = f * mul; os.detune.value = cents;
+    g.gain.value = lvl * norm * I.gain;
+    os.connect(g);
+    if (pan) { const pn = ctx.createStereoPanner(); pn.pan.value = pan; g.connect(pn); pn.connect(filt); } else g.connect(filt);
+    os.start(now); oscs.push(os);
+  }
+  const tuned = oscs.slice();
+  if (I.vibC > 0) {                                   // delayed pitch vibrato
     const lfo = ctx.createOscillator(), lg = ctx.createGain();
-    lfo.frequency.value = I.vib.rate;
+    lfo.frequency.value = I.vibR;
     lg.gain.setValueAtTime(0, now);
-    lg.gain.linearRampToValueAtTime(I.vib.cents, now + I.vib.delay + 0.4);
+    lg.gain.linearRampToValueAtTime(I.vibC, now + I.vibD + 0.4);
     lfo.connect(lg);
-    oscs.forEach(o => lg.connect(o.detune));
+    tuned.forEach(os => lg.connect(os.detune));
     lfo.start(now); oscs.push(lfo);
   }
-  if (I.wob) {                                   // filter wobble
+  if (I.wobD > 0) {                                   // filter wobble
     const lfo = ctx.createOscillator(), lg = ctx.createGain();
-    lfo.frequency.value = I.wob.rate;
-    lg.gain.value = Math.min(f * I.f1, I.fmax1) * I.wob.depth;
-    lfo.connect(lg).connect(filt.frequency);
+    lfo.frequency.value = I.wobR;
+    lg.gain.value = cutS(I.fc1) * I.wobD;
+    lfo.connect(lg); lg.connect(filt.frequency);
     lfo.start(now); oscs.push(lfo);
   }
   filt.connect(env).connect(rel).connect(o.dest || bus);
-  voices[id] = { oscs, rel, relT: I.rel || 0.12 };
+  voices[id] = { oscs, rel, filt, I, fStart, midi };
   setDown(midi, true);
-  voices[id].midi = midi;
 }
 
 function noteOff(id) {
@@ -438,10 +438,13 @@ function noteOff(id) {
 function releaseVoice(id) {
   const v = voices[id];
   if (!v) return;
-  const t = ctx.currentTime;
-  const rt = v.relT || 0.12;
-  v.rel.gain.setTargetAtTime(0, t, rt);
-  v.oscs.forEach(o => o.stop(t + Math.max(1, rt * 8)));
+  const t = ctx.currentTime, I = v.I;
+  v.rel.gain.setTargetAtTime(0, t, Math.max(0.005, I.rel / 3));
+  if (I.fcr > 0) {                                    // filter release: cutoff returns to its start level
+    v.filt.frequency.cancelScheduledValues(t);
+    v.filt.frequency.setTargetAtTime(v.fStart, t, I.fcr / 3);
+  }
+  v.oscs.forEach(os => os.stop(t + I.rel * 3 + 0.1));
   delete voices[id];
 }
 
@@ -675,15 +678,6 @@ let droneOn = false;
 const droneBtn = document.getElementById("droneBtn"), droneOctEl = document.getElementById("droneOct"),
       droneInstEl = document.getElementById("droneInst"), droneVolEl = document.getElementById("droneVol");
 
-// Offer only the sounds that sustain, reusing the main Sound menu's groups and names
-document.querySelectorAll("#inst optgroup").forEach(g => {
-  const opts = [...g.querySelectorAll("option")].filter(o => INSTRUMENTS[o.value].sus);
-  if (!opts.length) return;
-  const og = document.createElement("optgroup"); og.label = g.label;
-  opts.forEach(o => og.appendChild(new Option(o.textContent, o.value)));
-  droneInstEl.appendChild(og);
-});
-droneInstEl.value = "pad";
 
 function applyDroneLevel() { if (droneGain) droneGain.gain.value = droneVolEl.value / 100; }
 function startDrone() {
@@ -700,18 +694,173 @@ droneBtn.onclick = () => {
 };
 droneOctEl.onchange = droneInstEl.onchange = restartDrone;
 droneVolEl.oninput = applyDroneLevel;
+// ---------- Sound editor ----------
+const WAVES = ["off", "sine", "triangle", "sawtooth", "square"];
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const clone = x => JSON.parse(JSON.stringify(x));
+const esc = t => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+const OSCR = { 1: [.25, 16], 2: [-1200, 1200], 3: [0, 1.5], 4: [-1, 1] };
+// [key, label, min, max, step, explanation]
+const NUM = [
+  ["atk", "Attack (s)", 0, 3, .001, "How long the note takes to rise from silence to full volume."],
+  ["dec", "Decay (s)", .02, 10, .01, "How long the volume takes to fall (about 95%) from the peak to the sustain level."],
+  ["sus", "Sustain (0-1)", 0, 1, .01, "Level held while the key is down. 0 means the note dies away by itself, like a piano."],
+  ["rel", "Release (s)", .02, 5, .01, "How long the note takes to fade out after you let go."],
+  ["dtrk", "Higher notes decay faster (s per semitone)", 0, .1, .001, "Shortens the decay as the pitch rises. 0 gives every note the same decay."],
+  ["decMin", "Shortest decay (s)", .02, 5, .01, "The decay never gets shorter than this."],
+  ["fc0", "Filter start (x pitch)", .5, 40, .1, "Where the low-pass filter starts when a note begins, as a multiple of the note's pitch."],
+  ["fca", "Filter attack (s)", 0, 3, .01, "Time to rise from the start cutoff to the peak. 0 means no filter attack (the peak is ignored)."],
+  ["fcp", "Filter peak (x pitch)", 0, 40, .1, "Cutoff reached at the end of the filter attack. Only used when the filter attack is above 0."],
+  ["fcT", "Filter decay (s)", .005, 5, .005, "Time constant for the cutoff to move from the peak (or start) to the filter sustain. Small is fast."],
+  ["fc1", "Filter sustain (x pitch)", .5, 40, .1, "Cutoff the filter settles on while the key is held."],
+  ["fcr", "Filter release (s)", 0, 3, .01, "After you let go, the cutoff returns to the start level over this time. 0 turns it off."],
+  ["fmax0", "Cutoff cap, start/peak (Hz)", 200, 20000, 50, "Highest cutoff allowed at the start and peak."],
+  ["fmax1", "Cutoff cap, sustain (Hz)", 200, 20000, 50, "Highest cutoff allowed while the note is held."],
+  ["fmin0", "Cutoff floor, start/peak (Hz)", 0, 10000, 50, "Lowest cutoff allowed at the start and peak. A floor keeps low notes bright."],
+  ["fmin1", "Cutoff floor, sustain (Hz)", 0, 10000, 50, "Lowest cutoff allowed while the note is held."],
+  ["q", "Resonance (dB)", .1, 20, .1, "Boost at the cutoff. About 0.5 to 1 is neutral; 4 to 9 sounds vocal or wah-like."],
+  ["gain", "Level trim", .1, 2, .05, "Overall level of this sound."],
+  ["chm", "Chorus mix (0-1)", 0, 1, .01, "How much stereo chorus is blended in (0 is off). The chorus is shared, so it follows the sound you play with the keys."],
+  ["chr", "Chorus rate (Hz)", .05, 5, .05, "Speed of the chorus wobble."],
+  ["chd", "Chorus depth (ms)", 0, 8, .1, "Size of the chorus wobble."],
+  ["vibC", "Vibrato depth (cents)", 0, 100, 1, "Pitch vibrato depth. 0 is off."],
+  ["vibR", "Vibrato rate (Hz)", .1, 12, .1, "Speed of the vibrato."],
+  ["vibD", "Vibrato fade-in (s)", 0, 3, .05, "The vibrato starts at zero and grows to full depth over this time plus 0.4 s."],
+  ["wobR", "Wobble rate (Hz)", .1, 12, .1, "Speed of the filter wobble."],
+  ["wobD", "Wobble depth (0-1)", 0, 1, .01, "How far the wobble swings the filter cutoff. 0 is off."]
+];
+const NEUTRAL = { atk:.01, dec:.5, sus:.8, rel:.3, dtrk:0, decMin:.02, fc0:6, fca:0, fcp:0, fcT:.2, fc1:4, fcr:0,
+  fmax0:10000, fmax1:8000, fmin0:0, fmin1:0, q:.7, gain:1, chm:0, chr:.6, chd:3, vibC:0, vibR:5.5, vibD:.25, wobR:3.5, wobD:0 };
+
+function fixPreset(x, key) {                       // validates a preset read from storage
+  if (!x || !Array.isArray(x.osc) || !x.osc.length) return null;
+  const P = { name: (typeof x.name === "string" && x.name.trim()) ? x.name.trim().slice(0, 40) : key,
+              group: (typeof x.group === "string" && x.group.trim()) ? x.group.trim().slice(0, 30) : "My sounds" };
+  P.osc = x.osc.slice(0, 8).map(r => !Array.isArray(r) ? ["off", 1, 0, 0, 0] :
+    [WAVES.includes(r[0]) ? r[0] : "off", clamp(+r[1] || 1, ...OSCR[1]), clamp(+r[2] || 0, ...OSCR[2]),
+     clamp(+r[3] || 0, ...OSCR[3]), clamp(+r[4] || 0, ...OSCR[4])]);
+  for (const [k, , lo, hi] of NUM) P[k] = clamp(Number.isFinite(+x[k]) && x[k] !== null ? +x[k] : NEUTRAL[k], lo, hi);
+  return P;
+}
+function loadSynth(syn) {
+  const ok = {};
+  if (syn && typeof syn === "object")
+    for (const k in syn) if (/^[A-Za-z0-9_]+$/.test(k) && k !== "__proto__") { const P = fixPreset(syn[k], k); if (P) ok[k] = P; }
+  if (!Object.keys(ok).length) return;
+  for (const k in INSTRUMENTS) delete INSTRUMENTS[k];
+  Object.assign(INSTRUMENTS, ok);
+}
+
+function menuHTML(keep) {
+  const groups = {};
+  for (const [k, P] of Object.entries(INSTRUMENTS)) if (keep(P)) (groups[P.group] = groups[P.group] || []).push([k, P.name]);
+  return Object.entries(groups).map(([g, items]) => '<optgroup label="' + esc(g) + '">' +
+    items.map(([k, n]) => '<option value="' + esc(k) + '">' + esc(n) + '</option>').join("") + '</optgroup>').join("");
+}
+function renderSoundMenus(sel) {                   // rebuilds the Sound menu and the drone's menu (sustaining sounds only)
+  const instEl = document.getElementById("inst"), keepDrone = droneInstEl.value;
+  instEl.innerHTML = menuHTML(() => true);
+  setSel(instEl, sel);
+  if (!INSTRUMENTS[instEl.value]) instEl.selectedIndex = 0;
+  inst = INSTRUMENTS[instEl.value];
+  droneInstEl.innerHTML = menuHTML(P => P.sus > 0.05);
+  setSel(droneInstEl, keepDrone || "pad");
+  if (!INSTRUMENTS[droneInstEl.value]) droneInstEl.selectedIndex = 0;
+}
+
+let delArm = null;
+function renderSynth() {
+  const ui = document.getElementById("synthui"), key = document.getElementById("inst").value, P = INSTRUMENTS[key];
+  if (!ui || !P) return;
+  clearTimeout(delArm); delArm = null;
+  let h = '<div class="ebar"><label>Name <input id="pname" type="text" value="' + esc(P.name) + '"></label>' +
+    '<button id="prename">Rename</button><button id="pnew">Save as new sound</button><button id="pdel">Delete</button>' +
+    (DEFAULTS[key] ? '<button id="preset">Reset this sound</button>' : '') +
+    '<button id="prestore">Restore built-in sounds</button><span id="pmsg"></span></div>' +
+    '<p class="enote">Editing the sound chosen in the <b>Sound</b> menu. Changes apply to the next note you play; hover over a setting for an explanation. Oscillator levels set the balance between the oscillators, not the overall volume (use Level trim for that).</p><div class="egrid">';
+  for (const [k, l, mn, mx, st, tip] of NUM)
+    h += '<label title="' + esc(tip) + '">' + esc(l) + '<input type="number" data-k="' + k + '" min="' + mn + '" max="' + mx +
+         '" step="' + st + '" value="' + P[k] + '"></label>';
+  h += '</div><table class="oscs"><thead><tr><th>Osc</th><th>Wave</th><th>Pitch x</th><th>Detune (cents)</th><th>Level</th><th>Pan (-1 to 1)</th></tr></thead><tbody>';
+  for (let i = 0; i < 8; i++) {
+    const r = P.osc[i] || ["off", 1, 0, 0, 0];
+    h += '<tr><td>' + (i + 1) + '</td><td><select data-o="' + i + '" data-f="0">' +
+      WAVES.map(w => '<option' + (w === r[0] ? ' selected' : '') + '>' + w + '</option>').join("") + '</select></td>' +
+      [1, 2, 3, 4].map(f => '<td><input type="number" data-o="' + i + '" data-f="' + f + '" min="' + OSCR[f][0] + '" max="' + OSCR[f][1] +
+        '" step="' + (f === 1 ? "any" : f === 2 ? 1 : f === 3 ? .05 : .1) + '" value="' + r[f] + '"></td>').join("") + '</tr>';
+  }
+  ui.innerHTML = h + '</tbody></table>';
+}
+function synthEdit(e) {
+  const t = e.target, P = INSTRUMENTS[document.getElementById("inst").value], v = parseFloat(t.value);
+  if (!P) return;
+  if (t.dataset.k) {
+    if (isNaN(v)) return;
+    const spec = NUM.find(n => n[0] === t.dataset.k);
+    P[t.dataset.k] = clamp(v, spec[2], spec[3]);
+  } else if (t.dataset.o != null) {
+    const i = +t.dataset.o, f = +t.dataset.f;
+    while (P.osc.length <= i) P.osc.push(["off", 1, 0, 0, 0]);
+    if (f === 0) P.osc[i][0] = t.value; else if (!isNaN(v)) P.osc[i][f] = clamp(v, ...OSCR[f]);
+  } else return;
+  if (ctx) setChorus(inst);
+  if (t.dataset.k === "sus") renderSoundMenus(document.getElementById("inst").value);   // sustaining sounds feed the drone menu
+}
+const synthUI = document.getElementById("synthui");
+synthUI.addEventListener("input", synthEdit);
+synthUI.addEventListener("change", synthEdit);
+document.getElementById("inst").onchange = () => {
+  inst = INSTRUMENTS[document.getElementById("inst").value];
+  renderSynth(); if (ctx) setChorus(inst);
+};
+synthUI.addEventListener("click", e => {
+  const id = e.target.id, cur = document.getElementById("inst").value, P = INSTRUMENTS[cur];
+  const msg = t => { const m = document.getElementById("pmsg"); if (m) m.textContent = t; };
+  const done = (sel, text) => { renderSoundMenus(sel); renderSynth(); if (ctx) setChorus(inst); saveSettings(); msg(text); };
+  if (!P) return;
+  if (id === "prename") {
+    const nm = document.getElementById("pname").value.trim();
+    if (!nm) { msg("Enter a name first."); return; }
+    P.name = nm.slice(0, 40); done(cur, "Renamed.");
+  } else if (id === "pnew") {
+    let nm = document.getElementById("pname").value.trim();
+    if (!nm || nm === P.name) nm = P.name + " copy";
+    let n = 1; while (INSTRUMENTS["c" + n]) n++;
+    const nid = "c" + n;
+    INSTRUMENTS[nid] = clone(P); INSTRUMENTS[nid].name = nm.slice(0, 40); INSTRUMENTS[nid].group = "My sounds";
+    done(nid, "Saved as a new sound.");
+  } else if (id === "pdel") {
+    if (Object.keys(INSTRUMENTS).length < 2) { msg("At least one sound must remain."); return; }
+    if (!delArm) {
+      e.target.textContent = "Click again to delete";
+      delArm = setTimeout(() => { delArm = null; const b = document.getElementById("pdel"); if (b) b.textContent = "Delete"; }, 4000);
+      return;
+    }
+    clearTimeout(delArm); delArm = null; delete INSTRUMENTS[cur]; done(undefined, "Deleted.");
+  } else if (id === "preset") {
+    INSTRUMENTS[cur] = clone(DEFAULTS[cur]); done(cur, "Reset.");
+  } else if (id === "prestore") {
+    let c = 0;
+    for (const k in DEFAULTS) if (!INSTRUMENTS[k]) { INSTRUMENTS[k] = clone(DEFAULTS[k]); c++; }
+    done(cur, c ? "Restored " + c + " built-in sound(s)." : "All built-in sounds are present.");
+  }
+});
+
 // ---------- Memory: settings are remembered between visits (browser localStorage) ----------
+function collectSettings() {                       // everything that is saved, as one plain object
+  return {
+    mix: mixEl.value, size: sizeEl.value, vol: volEl.value, inst: document.getElementById("inst").value,
+    transpose, octave: octaveShift,
+    selected: [...selected], bpm: bpmEl.value, snd: sndEl.checked, delay: delayEl.value,
+    leap: leapEl.value, reveal: revealEl.checked,
+    droneOct: droneOctEl.value, droneInst: droneInstEl.value, droneVol: droneVolEl.value,
+    synth: INSTRUMENTS, synthV: 3
+  };
+}
 function saveSettings() {
   if (loadingSettings) return;
-  try {
-    localStorage.setItem(STORE_KEY, JSON.stringify({
-      mix: mixEl.value, size: sizeEl.value, vol: volEl.value, inst: document.getElementById("inst").value,
-      transpose, octave: octaveShift,
-      selected: [...selected], bpm: bpmEl.value, snd: sndEl.checked, delay: delayEl.value,
-      leap: leapEl.value, reveal: revealEl.checked,
-      droneOct: droneOctEl.value, droneInst: droneInstEl.value, droneVol: droneVolEl.value
-    }));
-  } catch (_) { /* storage unavailable: carry on without saving */ }
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(collectSettings())); }
+  catch (_) { /* storage unavailable: carry on without saving */ }
 }
 document.addEventListener("input", saveSettings);
 document.addEventListener("change", saveSettings);
@@ -719,16 +868,20 @@ document.addEventListener("change", saveSettings);
 function setSel(el, v) { if (v != null && [...el.options].some(o => o.value === String(v))) el.value = v; }
 function setNum(el, v, lo, hi) { v = Number(v); if (v === v && v !== Infinity && v !== -Infinity) el.value = Math.max(lo, Math.min(hi, v)); }
 
-(function loadSettings() {
-  let d = null;
-  try { d = JSON.parse(localStorage.getItem(STORE_KEY)); } catch (_) {}
+// Applies a settings object (from storage or from an imported file). Every value is validated.
+function applySettings(d) {
+  loadingSettings = true;
+  if (playing) stopTrainer();
+  renderSoundMenus("grand");
   if (d && typeof d === "object") {
+    if (d.synth) loadSynth(d.synth);
+    renderSoundMenus(d.inst);
     setNum(mixEl, d.mix, 0, 100); setNum(sizeEl, d.size, 0.5, 6); setNum(volEl, d.vol, 0, 100);
-    const instSel = document.getElementById("inst");
-    setSel(instSel, d.inst); inst = INSTRUMENTS[instSel.value] || inst;
     if (typeof d.transpose === "number") setTranspose(d.transpose);
     if (typeof d.octave === "number") setOctave(d.octave);
-    if (Array.isArray(d.selected)) d.selected.forEach(m => { if (keyEls[m] && !selected.has(m)) toggleSelect(m); });
+    [...selected].forEach(m => toggleSelect(m));                  // replace the current selection
+    if (Array.isArray(d.selected))
+      d.selected.forEach(m => { if (Number.isInteger(m) && Object.prototype.hasOwnProperty.call(keyEls, m) && !selected.has(m)) toggleSelect(m); });
     setNum(bpmEl, d.bpm, 0, 1000); bpmEl.oninput();
     if (typeof d.snd === "boolean") sndEl.checked = d.snd;
     sndEl.onchange();
@@ -736,14 +889,54 @@ function setNum(el, v, lo, hi) { v = Number(v); if (v === v && v !== Infinity &&
     if (typeof d.reveal === "boolean") revealEl.checked = d.reveal;
     setSel(droneOctEl, d.droneOct); setSel(droneInstEl, d.droneInst); setNum(droneVolEl, d.droneVol, 0, 100);
   }
+  renderSynth();
+  if (ctx) { makeReverb(parseFloat(sizeEl.value)); applyMix(); applyVol(); applyDroneLevel(); setChorus(inst); }
+  if (droneOn) restartDrone();
   loadingSettings = false;
+}
 
+(function loadSettings() {
+  let d = null;
+  try { d = JSON.parse(localStorage.getItem(STORE_KEY)); } catch (_) {}
+  applySettings(d);
   let ok = true;
   try { localStorage.setItem(STORE_KEY + ".test", "1"); localStorage.removeItem(STORE_KEY + ".test"); } catch (_) { ok = false; }
   document.getElementById("memStatus").textContent = ok
     ? "Settings are saved automatically in this browser."
-    : "Settings can't be saved here (browser storage is unavailable).";
+    : "Settings can't be saved here (browser storage is unavailable), but you can still export them.";
 })();
+
+// Export / import: everything above (settings, edited sounds, your own sounds) as one JSON file
+const showIo = t => { document.getElementById("ioMsg").textContent = t; };
+document.getElementById("exportBtn").onclick = () => {
+  const payload = { app: "synth-piano-sight-singing", version: 1, exported: new Date().toISOString(), settings: collectSettings() };
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
+  a.download = "synth-piano-settings-" + new Date().toISOString().slice(0, 10) + ".json";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  showIo("Exported " + a.download + ".");
+};
+document.getElementById("importBtn").onclick = () => document.getElementById("importFile").click();
+document.getElementById("importFile").onchange = e => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  if (file.size > 2000000) { showIo("That file is too large to be a settings file."); return; }
+  const rd = new FileReader();
+  rd.onerror = () => showIo("Couldn't read that file.");
+  rd.onload = () => {
+    let d;
+    try { d = JSON.parse(rd.result); } catch (_) { showIo("That file isn't valid JSON."); return; }
+    if (d && d.app === "synth-piano-sight-singing" && d.settings && typeof d.settings === "object") d = d.settings;
+    else if (!(d && typeof d === "object" && !Array.isArray(d) && ("synth" in d || "mix" in d))) {
+      showIo("That doesn't look like a settings file from this page."); return;
+    }
+    applySettings(d); saveSettings();
+    showIo("Imported " + file.name + ".");
+  };
+  rd.readAsText(file);
+};
 document.getElementById("resetBtn").onclick = () => {
   try { localStorage.removeItem(STORE_KEY); } catch (_) {}
   location.reload();

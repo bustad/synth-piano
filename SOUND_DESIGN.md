@@ -1,8 +1,14 @@
 # Sound design: how every sound is built
 
-This document explains exactly how each of the 22 sounds in `index.html` is generated. Everything is made in real time with the Web Audio API from oscillators, gains and one filter per note. There are no samples, no audio files and no libraries.
+This document explains exactly how each of the 22 sounds in `piano.html` is generated. Everything is made in real time with the Web Audio API from oscillators, gains and one filter per note. There are no samples, no audio files and no libraries.
 
 The numbers below were chosen from common synthesis practice, not measured from real instruments, so treat the sounds as approximations in the style of the instrument they are named after.
+
+> **Update: the sound editor.** The engine now uses full ADSR envelopes for both amplitude and filter, detuning in cents, per-oscillator stereo pan and a shared stereo chorus, and every sound can be edited in the page (see the README). The recipe tables below describe the original design of each sound in its original notation. They translate to the editor's settings like this:
+> - A partial multiple such as `×1.003` is now a pitch multiple of 1 with a detune of about +5 cents (cents = 1200 × log2 of the ratio).
+> - The envelope times are now "time to fall about 95%": the editor's **Decay** and **Release** are three times the time constants (τ) quoted below, and the piano sounds' decay time is about 0.35 times the old value, with the same pitch dependence. Sound-by-sound sustain levels are unchanged.
+> - The filter glide from `start` to `end` is now an exponential approach to the filter sustain level with a **filter decay** time constant of one third of the old glide time.
+> - String machine and 80s poly synth now have a little stereo chorus, and Warm pad, 80s poly synth, String machine and Supersaw have their detuned oscillators panned left and right. Everything else starts centred with no chorus.
 
 ## 1. The signal path of one note
 
