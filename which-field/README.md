@@ -61,10 +61,10 @@ A scrollable table of suggested A/B pairs, with a row number (`#`), a descriptio
 To change them, open **Edit starting points**. Write one row per line:
 
 ```
-Major triad | Minor triad | Basic chord quality
+Basic chord quality | Major triad | Minor triad
 ```
 
-That is `field A | field B | description`. The description is optional. Use commas for several groups in one field. Lines starting with `#` are ignored.
+That is `description | field A | field B`, the same order as the columns in the table. A line with only two parts is read as `field A | field B` with no description. Use commas for several groups in one field. Lines saved in the old order (`field A | field B | description`) are converted automatically the first time you load or import them. Lines starting with `#` are ignored.
 
 The `#` column counts only valid rows, so comments and blank lines don't affect the numbering.
 

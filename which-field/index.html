@@ -114,7 +114,7 @@ code{background:var(--soft);padding:1px 6px;border-radius:6px;font-size:12.5px}
   <p class="note">Click a row to load it into the fields.</p>
   <div class="scroll"><table><thead><tr><th>#</th><th>Description</th><th>Field A</th><th>Field B</th></tr></thead><tbody id="starts"></tbody></table></div>
   <details><summary>Edit starting points</summary>
-  <p class="note">One row per line: <code>field A | field B | description</code> (the description is optional). Separate several groups within a field with commas. Lines starting with # are ignored.</p>
+  <p class="note">One row per line: <code>description | field A | field B</code> (the same order as the table). A line with only two parts is read as <code>field A | field B</code> with no description. Separate several groups within a field with commas. Lines starting with # are ignored.</p>
   <textarea id="startsrc" spellcheck="false"></textarea></details>
 </section>
 
@@ -194,27 +194,29 @@ C4/.5 D4/.5 Eb4/.5 F4/.5 G4/.5 A4/.5 Bb4/.5 C5/2
 <script>
 const $=id=>document.getElementById(id);
 const DEFAULT_LIB=$("lib").value;
-const DEFAULT_STARTS=`Major triad | Minor triad | Basic chord quality
-Major 3rd up | Minor 3rd up | Basic interval quality
-Perfect 5th up | Tritone up | Stable vs. tense interval
-Major triad, Minor triad | Minor triad, Major triad | Order of two chords
-Maj7 chord, Dom7 chord | Dom7 chord, Maj7 chord | Order of two seventh chords
-Diminished triad, Augmented triad | Augmented triad, Diminished triad | Order of two dissonant triads
-Minor 2nd up, Major 2nd up | Major 2nd up, Minor 2nd up | Order of small intervals
-Major scale up | Dorian scale up | Scale colour: lowered 3rd and 7th in Dorian
-Min7 chord, Dom7 chord | Dom7 chord, Min7 chord | Order of seventh chords`;
+const DEFAULT_STARTS=`Basic chord quality | Major triad | Minor triad
+Basic interval quality | Major 3rd up | Minor 3rd up
+Stable vs. tense interval | Perfect 5th up | Tritone up
+Order of two chords | Major triad, Minor triad | Minor triad, Major triad
+Order of two seventh chords | Maj7 chord, Dom7 chord | Dom7 chord, Maj7 chord
+Order of two dissonant triads | Diminished triad, Augmented triad | Augmented triad, Diminished triad
+Order of small intervals | Minor 2nd up, Major 2nd up | Major 2nd up, Minor 2nd up
+Scale colour: lowered 3rd and 7th in Dorian | Major scale up | Dorian scale up
+Order of seventh chords | Min7 chord, Dom7 chord | Dom7 chord, Min7 chord`;
 const KEY="eartrain.v1";
-function state(){return{app:"ear-training",version:1,lib:$("lib").value,starts:$("startsrc").value,fa:$("fa").value,fb:$("fb").value,sound:$("sound").value,rev:$("reverb").value,synth:PRESETS,synthV:2,revLen}}
+function state(){return{app:"ear-training",version:1,lib:$("lib").value,starts:$("startsrc").value,fa:$("fa").value,fb:$("fb").value,sound:$("sound").value,rev:$("reverb").value,synth:PRESETS,synthV:2,startsV:2,revLen}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(state()))}catch(e){}}
 function load(){try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return {}}}
+function migrateStarts(t){return t.split("\n").map(l=>{const q=l.split("|").map(x=>x.trim());
+  if(l.trim()==""||l.trim()[0]=="#"||q.length<3)return l;return[q.slice(2).join(" | "),q[0],q[1]].join(" | ")}).join("\n")}
 const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
 let STARTS=[];
 function renderStarts(){
-  STARTS=$("startsrc").value.split("\n").map(l=>l.trim()).filter(l=>l&&l[0]!="#"&&l.includes("|")).map(l=>{const q=l.split("|").map(x=>x.trim());return[q[0],q[1],q.slice(2).join(" | ")]});
+  STARTS=$("startsrc").value.split("\n").map(l=>l.trim()).filter(l=>l&&l[0]!="#"&&l.includes("|")).map(l=>{const q=l.split("|").map(x=>x.trim());return q.length>=3?[q[1],q.slice(2).join(" | "),q[0]]:[q[0],q[1],""]});
   $("starts").innerHTML=STARTS.map((r,i)=>`<tr data-i="${i}"><td>${i+1}</td><td>${esc(r[2])}</td><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join("")}
 const saved=load();
 $("lib").value=saved.lib!=null?saved.lib:DEFAULT_LIB;
-$("startsrc").value=saved.starts!=null?saved.starts:DEFAULT_STARTS;
+$("startsrc").value=saved.starts!=null?(saved.startsV>=2?saved.starts:migrateStarts(saved.starts)):DEFAULT_STARTS;
 renderStarts();
 $("fa").value=saved.fa!=null?saved.fa:(STARTS[0]?STARTS[0][0]:"");
 $("fb").value=saved.fb!=null?saved.fb:(STARTS[0]?STARTS[0][1]:"");
@@ -430,7 +432,7 @@ function ioMsg(t,err){const m=$("iomsg");m.textContent=t;m.style.color=err?"var(
 function applyState(o){
   if(!o||typeof o!="object"||(typeof o.lib!="string"&&typeof o.starts!="string"&&!o.synth))throw new Error("this does not look like an exported settings file.");
   if(typeof o.lib=="string")$("lib").value=o.lib;
-  if(typeof o.starts=="string")$("startsrc").value=o.starts;
+  if(typeof o.starts=="string")$("startsrc").value=o.startsV>=2?o.starts:migrateStarts(o.starts);
   if(typeof o.fa=="string")$("fa").value=o.fa;
   if(typeof o.fb=="string")$("fb").value=o.fb;
   if(o.rev!=null&&!isNaN(+o.rev))$("reverb").value=Math.min(100,Math.max(0,+o.rev));
