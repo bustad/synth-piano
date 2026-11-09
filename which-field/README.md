@@ -34,6 +34,20 @@ Fields can hold one name or several. Comparing "Major triad" with "Minor triad" 
 
 Replaying or looping always uses the same pick until you press **Next round**. Editing the fields, the library or turning Transpose on or off also discards the current round.
 
+## Keyboard shortcuts
+
+| Key | Action |
+| --- | --- |
+| `Space` or `P` | Play / Stop |
+| `L` | Loop on or off |
+| `T` | Transpose on or off |
+| `A` | It was A |
+| `B` | It was B |
+| `R` | Reveal |
+| `N` | Next round |
+
+The shortcuts are switched off while the cursor is in a text box, a number box or a menu, so typing group names or notes works as usual. They also don't fire when Ctrl, Cmd or Alt is held, so they don't clash with browser shortcuts. Hover over a button to see its key.
+
 ## Available groups
 
 This row lists every group in the library, with the number of examples in each. Click one to add it to whichever field (A or B) you edited last. If you haven't edited either yet, it goes into A.

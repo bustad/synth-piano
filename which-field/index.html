@@ -86,16 +86,17 @@ code{background:var(--soft);padding:1px 6px;border-radius:6px;font-size:12.5px}
     <div><label class="fl" for="fb"><span class="badge b">B</span>Field B</label><textarea id="fb" placeholder="Group names, separated by commas"></textarea></div>
   </div>
   <div class="transport">
-    <button class="p" id="play">Play</button>
-    <button class="tog" id="loop">Loop: off</button>
-    <button class="tog" id="transpose">Transpose: off</button>
+    <button class="p" id="play" title="Play / Stop (Space or P)">Play</button>
+    <button class="tog" id="loop" title="Loop (L)">Loop: off</button>
+    <button class="tog" id="transpose" title="Transpose (T)">Transpose: off</button>
     <span class="spacer"></span>
-    <span class="seg"><button id="guessA">It was A</button><button id="guessB">It was B</button></span>
-    <button id="reveal">Reveal</button>
-    <button id="next">Next round</button>
+    <span class="seg"><button id="guessA" title="Guess A (A)">It was A</button><button id="guessB" title="Guess B (B)">It was B</button></span>
+    <button id="reveal" title="Reveal (R)">Reveal</button>
+    <button id="next" title="Next round (N)">Next round</button>
   </div>
   <div id="status"></div>
   <div id="answer"></div>
+  <p class="note" style="margin:10px 0 0">Shortcuts: <code>Space</code> or <code>P</code> play/stop, <code>L</code> loop, <code>T</code> transpose, <code>A</code> / <code>B</code> guess, <code>R</code> reveal, <code>N</code> next round. They are off while you type in a text box.</p>
 </section>
 
 <section class="card">
@@ -446,6 +447,16 @@ $("import").onclick=()=>$("importfile").click();
 $("importfile").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;
   try{applyState(JSON.parse(await f.text()));ioMsg("Imported settings from "+f.name+".")}
   catch(err){ioMsg("Import failed: "+err.message,true)}};
+
+const KEYS={" ":"play",p:"play",l:"loop",t:"transpose",a:"guessA",b:"guessB",r:"reveal",n:"next"};
+document.addEventListener("keydown",e=>{
+  if(e.ctrlKey||e.metaKey||e.altKey||e.repeat)return;
+  const t=e.target,tag=t.tagName;
+  if(t.isContentEditable||tag=="TEXTAREA"||tag=="SELECT"||(tag=="INPUT"&&t.type!="range"&&t.type!="checkbox"&&t.type!="file"))return;
+  const id=KEYS[e.key.toLowerCase()];if(!id)return;
+  e.preventDefault();
+  if(tag=="BUTTON"||tag=="SUMMARY")t.blur();
+  $(id).click()});
 </script>
 </body>
 </html>
