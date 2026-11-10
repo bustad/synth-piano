@@ -12,8 +12,10 @@
 *{box-sizing:border-box}
 body{margin:0;padding:24px 16px 48px;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,"Segoe UI",Roboto,sans-serif;max-width:980px;margin-inline:auto}
 header{margin:4px 2px 18px}
-h1{font-size:26px;letter-spacing:-.02em;margin:0}
-.sub{margin:2px 0 0;color:var(--mut)}
+.brand{display:flex;align-items:center;gap:14px}
+.logo{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;flex:none;background:linear-gradient(135deg,var(--acc),color-mix(in srgb,var(--acc) 40%,#c45cf0));box-shadow:0 4px 14px color-mix(in srgb,var(--acc) 40%,transparent)}
+h1{font-size:30px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin:0;background:linear-gradient(90deg,var(--fg) 30%,var(--acc));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{margin:3px 0 0;color:var(--mut);font-size:15px}
 h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;margin:0 0 10px;color:var(--mut);font-weight:700}
 .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin:0 0 16px;box-shadow:var(--shadow)}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -82,8 +84,13 @@ code{background:var(--soft);padding:1px 6px;border-radius:6px;font-size:12.5px}
 </style>
 </head>
 <body>
-<header><h1>Ear training</h1><p class="sub">Listen, then decide which field was played.</p>
-  <div class="seg" style="margin-top:12px"><button class="tog on" id="modeCmp">Compare A/B</button><button class="tog" id="modeId">Identify</button></div></header>
+<header>
+  <div class="brand">
+    <div class="logo" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><path d="M4 11v4M9 7v12M14 3v20M19 8v10M24 11v4" transform="translate(-1 0)"/></svg></div>
+    <div><h1>Ear Training</h1><p class="sub" id="sub">Two options, one was played. Which one?</p></div>
+  </div>
+  <div class="seg" style="margin-top:14px"><button class="tog on" id="modeCmp">Compare A/B</button><button class="tog" id="modeId">Identify</button></div>
+</header>
 
 <section class="card">
   <div class="cmp"><div class="cols">
@@ -529,7 +536,8 @@ function newIdRound(){
   round={mode:"id",item,key:lastKey,ev,len:t,used,shift,answered:false};
   resetQ();$("answer").style.display="none"}
 function applyMode(m){mode=m=="id"?"id":"cmp";document.body.classList.toggle("idm",mode=="id");
-  $("modeCmp").classList.toggle("on",mode=="cmp");$("modeId").classList.toggle("on",mode=="id")}
+  $("modeCmp").classList.toggle("on",mode=="cmp");
+  $("sub").textContent=mode=="id"?"One sound, no clues. What is it?":"Two options, one was played. Which one?";$("modeId").classList.toggle("on",mode=="id")}
 function setMode(m){if(m==mode)return;stop();round=null;applyMode(m);$("answer").style.display="none";resetQ();setStatus("");save()}
 $("modeCmp").onclick=()=>setMode("cmp");$("modeId").onclick=()=>setMode("id");
 $("quizlist").onchange=()=>{stop();round=null;resetQ();$("answer").style.display="none";save()};

@@ -1,4 +1,4 @@
-# Ear training: which field was played?
+# Ear Training
 
 A single-file ear training page (`ear-training.html`). It has no dependencies and no server. Open the file in a modern browser and it works.
 
