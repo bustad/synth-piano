@@ -34,6 +34,30 @@ Fields can hold one name or several. Comparing "Major triad" with "Minor triad" 
 
 Replaying or looping always uses the same pick until you press **Next round**. Editing the fields, the library or turning Transpose on or off also discards the current round.
 
+## Identify mode
+
+Use the switch at the top of the page to change between **Compare A/B** (above) and **Identify**. In Identify mode you hear one item and say to yourself what it is, with no clues on screen.
+
+1. Choose a list in the **List** menu.
+2. Press **Play** (or **Next round**, which starts a new item and plays it straight away).
+3. Press **Reveal** to see the answer and exactly which examples were played.
+4. Press **Got it** or **Missed** to keep score, then **Next round**.
+
+Missed items come up more often, and the same item is never picked twice in a row. Loop, Transpose, Tempo, Sound and Reverb work as in Compare mode. The score covers the current session and isn't saved.
+
+### Quiz lists
+
+Open **Edit quiz lists** (it is closed by default so it doesn't give clues). Each list starts with `[List name]`, followed by one item per line:
+
+```
+[Chord qualities]
+Major triad | Major triad
+Dominant seventh | Dom7 chord
+Major triad, then minor triad | Major triad, Minor triad
+```
+
+That is `description | group names`. Several group names are separated by commas and played in order, as in the A and B fields. The description is what Reveal shows. A line without `|` is read as group names only, and the names are shown instead. Quiz lists are saved with everything else and included in Export, Import and Reset.
+
 ## Keyboard shortcuts
 
 | Key | Action |
@@ -41,8 +65,10 @@ Replaying or looping always uses the same pick until you press **Next round**. E
 | `Space` or `P` | Play / Stop |
 | `L` | Loop on or off |
 | `T` | Transpose on or off |
-| `A` | It was A |
-| `B` | It was B |
+| `A` | It was A (Compare mode) |
+| `B` | It was B (Compare mode) |
+| `G` | Got it (Identify mode) |
+| `M` | Missed (Identify mode) |
 | `R` | Reveal |
 | `N` | Next round |
 
@@ -128,7 +154,7 @@ Everything you edit is saved automatically in your browser: the library, the sta
 
 - Saved data belongs to one browser and one file location. Moving the HTML file or opening it in another browser starts from the defaults.
 - **Export settings** downloads everything above as one file (`ear-training-settings.json`). **Import settings** loads such a file, replacing your current library, starting points, fields, sound, reverb and synth settings. Use these to back up your work, move it to another browser or device, or share it.
-- **Reset library and starting points to defaults** (always visible below the library) restores the original library and starting points. Click it, then click it again within 4 seconds to confirm. It doesn't change your synth settings or the A/B fields.
+- **Reset library, starting points and quiz lists to defaults** (always visible below the library) restores the original library and starting points. Click it, then click it again within 4 seconds to confirm. It doesn't change your synth settings or the A/B fields.
 
 ## Troubleshooting
 

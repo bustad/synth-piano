@@ -27,7 +27,7 @@ textarea,input[type=number]{width:100%}
 textarea{min-height:68px;resize:vertical}
 textarea:focus,input:focus,select:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--soft)}
 #lib{min-height:220px;font:13px/1.45 ui-monospace,Menlo,Consolas,monospace}
-#startsrc{min-height:150px;font:13px/1.45 ui-monospace,Menlo,Consolas,monospace}
+#startsrc,#quizsrc{min-height:150px;font:13px/1.45 ui-monospace,Menlo,Consolas,monospace}
 .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
 .transport{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px 0 4px}
 .spacer{flex:1}
@@ -74,29 +74,39 @@ summary{cursor:pointer;color:var(--fg);font-weight:600;font-size:14px;list-style
 summary::-webkit-details-marker{display:none}
 summary::before{content:"\25B8";color:var(--mut);transition:transform .15s;display:inline-block}
 details[open]>summary::before{transform:rotate(90deg)}
+body.idm .cmp{display:none!important}
+body:not(.idm) .idn{display:none!important}
+#qcard{font-size:34px;font-weight:700;text-align:center;padding:28px 12px;margin:4px 0 6px;border:2px dashed var(--line);border-radius:14px;color:var(--mut)}
+#qcard.rev{color:var(--fg);border-style:solid;border-color:var(--acc);background:var(--soft);font-size:24px}
 code{background:var(--soft);padding:1px 6px;border-radius:6px;font-size:12.5px}
 </style>
 </head>
 <body>
-<header><h1>Ear training</h1><p class="sub">Listen, then decide which field was played.</p></header>
+<header><h1>Ear training</h1><p class="sub">Listen, then decide which field was played.</p>
+  <div class="seg" style="margin-top:12px"><button class="tog on" id="modeCmp">Compare A/B</button><button class="tog" id="modeId">Identify</button></div></header>
 
 <section class="card">
-  <div class="cols">
+  <div class="cmp"><div class="cols">
     <div><label class="fl" for="fa"><span class="badge">A</span>Field A</label><textarea id="fa" placeholder="Group names, separated by commas"></textarea></div>
     <div><label class="fl" for="fb"><span class="badge b">B</span>Field B</label><textarea id="fb" placeholder="Group names, separated by commas"></textarea></div>
+  </div></div>
+  <div class="idn">
+    <label class="ctl" style="margin-bottom:10px">List<select id="quizlist"></select></label>
+    <div id="qcard">?</div>
   </div>
   <div class="transport">
     <button class="p" id="play" title="Play / Stop (Space or P)">Play</button>
     <button class="tog" id="loop" title="Loop (L)">Loop: off</button>
     <button class="tog" id="transpose" title="Transpose (T)">Transpose: off</button>
     <span class="spacer"></span>
-    <span class="seg"><button id="guessA" title="Guess A (A)">It was A</button><button id="guessB" title="Guess B (B)">It was B</button></span>
+    <span class="seg cmp"><button id="guessA" title="Guess A (A)">It was A</button><button id="guessB" title="Guess B (B)">It was B</button></span>
+    <span class="seg idn"><button id="gotIt" title="Got it (G)">Got it</button><button id="missed" title="Missed (M)">Missed</button></span>
     <button id="reveal" title="Reveal (R)">Reveal</button>
     <button id="next" title="Next round (N)">Next round</button>
   </div>
   <div id="status"></div>
   <div id="answer"></div>
-  <p class="note" style="margin:10px 0 0">Shortcuts: <code>Space</code> or <code>P</code> play/stop, <code>L</code> loop, <code>T</code> transpose, <code>A</code> / <code>B</code> guess, <code>R</code> reveal, <code>N</code> next round. They are off while you type in a text box.</p>
+  <p class="note" style="margin:10px 0 0">Shortcuts: <code>Space</code> or <code>P</code> play/stop, <code>L</code> loop, <code>T</code> transpose, <code>A</code> / <code>B</code> guess (Compare mode), <code>G</code> / <code>M</code> got it / missed (Identify mode), <code>R</code> reveal, <code>N</code> next round. They are off while you type in a text box.</p>
 </section>
 
 <section class="card">
@@ -109,7 +119,15 @@ code{background:var(--soft);padding:1px 6px;border-radius:6px;font-size:12.5px}
   <details id="synthd"><summary>Synth settings</summary><div id="synthui"></div></details>
 </section>
 
-<section class="card">
+<section class="card idn">
+  <h2>Quiz lists</h2>
+  <p class="note">Choose a list above. A random item is played, and nothing is shown until you press Reveal. Items you miss come up more often.</p>
+  <details><summary>Edit quiz lists</summary>
+  <p class="note">Write <code>[List name]</code>, then one item per line: <code>description | group names</code>. Separate several groups with commas, and they are played in order. A line without <code>|</code> is read as group names only. The description is what Reveal shows. Lines starting with # are ignored.</p>
+  <textarea id="quizsrc" spellcheck="false"></textarea></details>
+</section>
+
+<section class="card cmp">
   <h2>Starting points</h2>
   <p class="note">Click a row to load it into the fields.</p>
   <div class="scroll"><table><thead><tr><th>#</th><th>Description</th><th>Field A</th><th>Field B</th></tr></thead><tbody id="starts"></tbody></table></div>
@@ -187,7 +205,7 @@ C4/.5 D4/.5 Eb4/.5 F4/.5 G4/.5 A4/.5 Bb4/.5 C5/2
 
 <section class="card">
   <h2>Your data</h2>
-  <div class="bar" style="margin-top:0"><button id="export">Export settings</button><button id="import">Import settings</button><button id="reset">Reset library and starting points to defaults</button><input type="file" id="importfile" accept=".json,application/json" hidden><span class="note" id="iomsg"></span></div>
+  <div class="bar" style="margin-top:0"><button id="export">Export settings</button><button id="import">Import settings</button><button id="reset">Reset library, starting points and quiz lists to defaults</button><input type="file" id="importfile" accept=".json,application/json" hidden><span class="note" id="iomsg"></span></div>
   <p class="note" style="margin-bottom:0">Everything you edit is saved automatically in this browser. Export saves it all to a file you can keep, share, or import in another browser.</p>
 </section>
 
@@ -204,7 +222,7 @@ Order of small intervals | Minor 2nd up, Major 2nd up | Major 2nd up, Minor 2nd 
 Scale colour: lowered 3rd and 7th in Dorian | Major scale up | Dorian scale up
 Order of seventh chords | Min7 chord, Dom7 chord | Dom7 chord, Min7 chord`;
 const KEY="eartrain.v1";
-function state(){return{app:"ear-training",version:1,lib:$("lib").value,starts:$("startsrc").value,fa:$("fa").value,fb:$("fb").value,sound:$("sound").value,rev:$("reverb").value,synth:PRESETS,synthV:2,startsV:2,revLen}}
+function state(){return{app:"ear-training",version:1,lib:$("lib").value,starts:$("startsrc").value,fa:$("fa").value,fb:$("fb").value,sound:$("sound").value,rev:$("reverb").value,synth:PRESETS,synthV:2,startsV:2,quiz:$("quizsrc").value,quizlist:$("quizlist").value,mode,revLen}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(state()))}catch(e){}}
 function load(){try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return {}}}
 function migrateStarts(t){return t.split("\n").map(l=>{const q=l.split("|").map(x=>x.trim());
@@ -352,6 +370,7 @@ function parseLib(){const lib={};let cur=null;
 const names=v=>v.split(/[,;\n]/).map(s=>s.trim()).filter(Boolean);
 
 function newRound(){
+  if(mode=="id")return newIdRound();
   const lib=parseLib();const A=names($("fa").value),B=names($("fb").value);
   if(!A.length||!B.length)throw new Error("Both fields need at least one group name.");
   const which=Math.random()<.5?"A":"B";const list=which=="A"?A:B;
@@ -405,9 +424,10 @@ function stop(){stopSound();playing=false;$("play").textContent="Play";if($("sta
 
 function show(){if(!round)return;
   const a=$("answer");a.style.display="block";
+  if(round.mode=="id"){$("qcard").textContent=round.item.desc||round.item.names.join(", ");$("qcard").classList.add("rev")}
   const sh=round.shift?" (transposed "+(round.shift>0?"+":"")+round.shift+" semitones from the written pitches)":"";
-  a.innerHTML="<b>Field "+round.which+"</b> was played"+sh+":<br>"+round.used.map(u=>u.replace(/&/g,"&amp;").replace(/</g,"&lt;")).join("<br>")}
-$("transpose").onclick=()=>{transposing=!transposing;$("transpose").textContent="Transpose: "+(transposing?"on (±6)":"off");$("transpose").classList.toggle("on",transposing);stop();round=null;$("answer").style.display="none"};
+  a.innerHTML=(round.mode=="id"?"Played":"<b>Field "+round.which+"</b> was played")+sh+":<br>"+round.used.map(u=>u.replace(/&/g,"&amp;").replace(/</g,"&lt;")).join("<br>")}
+$("transpose").onclick=()=>{transposing=!transposing;$("transpose").textContent="Transpose: "+(transposing?"on (±6)":"off");$("transpose").classList.toggle("on",transposing);stop();round=null;resetQ();$("answer").style.display="none"};
 
 $("play").onclick=()=>playing?stop():play();
 $("loop").onclick=()=>{looping=!looping;$("loop").textContent="Loop: "+(looping?"on":"off");$("loop").classList.toggle("on",looping)};
@@ -415,18 +435,19 @@ $("reveal").onclick=show;
 $("next").onclick=()=>{stop();round=null;play()};
 for(const k of ["A","B"])$("guess"+k).onclick=()=>{
   if(!round){setStatus("Press Play first.",true);return}
+  if(round.mode=="id")return;
   if(!round.guessed){round.guessed=true;score.t++;if(k==round.which)score.r++}
   setStatus((k==round.which?"Correct! ":"Not quite. ")+"Score: "+score.r+" / "+score.t);show()};
 ["fa","fb","lib","startsrc"].forEach(id=>$(id).addEventListener("input",()=>{if(id=="startsrc")renderStarts();else{round=null;if(id=="lib")renderGroups()}save()}));
 $("reverb").addEventListener("input",()=>{setRev();save()});
 $("sound").addEventListener("change",save);
-const RESET_LABEL="Reset library and starting points to defaults";
+const RESET_LABEL="Reset library, starting points and quiz lists to defaults";
 let resetArm=null;
 $("reset").onclick=()=>{
   if(!resetArm){$("reset").textContent="Click again to confirm (discards your edits)";
     resetArm=setTimeout(()=>{resetArm=null;$("reset").textContent=RESET_LABEL},4000);return}
   clearTimeout(resetArm);resetArm=null;$("reset").textContent=RESET_LABEL;
-  $("lib").value=DEFAULT_LIB;$("startsrc").value=DEFAULT_STARTS;renderStarts();renderGroups();stop();round=null;save();setStatus("Defaults restored.")};
+  $("lib").value=DEFAULT_LIB;$("startsrc").value=DEFAULT_STARTS;$("quizsrc").value=DEFAULT_QUIZ;renderQuiz();renderStarts();renderGroups();stop();round=null;save();setStatus("Defaults restored.")};
 
 function ioMsg(t,err){const m=$("iomsg");m.textContent=t;m.style.color=err?"var(--bad)":"";setStatus(t,err)}
 function applyState(o){
@@ -439,6 +460,7 @@ function applyState(o){
   if(o.synth){loadSynth(o.synth);if(!(o.synthV>=2)&&!PRESETS.strings)PRESETS.strings=JSON.parse(JSON.stringify(DEFP.strings))}
   renderSoundMenu(typeof o.sound=="string"?o.sound:$("sound").value);
   if(+o.revLen>=.3&&+o.revLen<=8){revLen=+o.revLen;if(bus)bus.conv.buffer=impulse(revLen,2.4)}
+  if(typeof o.quiz=="string"){$("quizsrc").value=o.quiz;renderQuiz(o.quizlist)}
   renderStarts();renderGroups();renderSynth();setRev();stop();round=null;save()}
 $("export").onclick=()=>{
   const a=document.createElement("a");
@@ -450,12 +472,81 @@ $("importfile").onchange=async e=>{const f=e.target.files[0];e.target.value="";i
   try{applyState(JSON.parse(await f.text()));ioMsg("Imported settings from "+f.name+".")}
   catch(err){ioMsg("Import failed: "+err.message,true)}};
 
-const KEYS={" ":"play",p:"play",l:"loop",t:"transpose",a:"guessA",b:"guessB",r:"reveal",n:"next"};
+const DEFAULT_QUIZ=`# Format: [List name], then one item per line: description | group names
+[Intervals]
+Minor 2nd up | Minor 2nd up
+Major 2nd up | Major 2nd up
+Minor 3rd up | Minor 3rd up
+Major 3rd up | Major 3rd up
+Perfect 5th up | Perfect 5th up
+Tritone up | Tritone up
+[Chord qualities]
+Major triad | Major triad
+Minor triad | Minor triad
+Diminished triad | Diminished triad
+Augmented triad | Augmented triad
+Major seventh | Maj7 chord
+Dominant seventh | Dom7 chord
+Minor seventh | Min7 chord
+[Scales]
+Major scale | Major scale up
+Dorian scale | Dorian scale up
+[Two chords in a row]
+Major triad, then minor triad | Major triad, Minor triad
+Minor triad, then major triad | Minor triad, Major triad
+Major seventh, then dominant seventh | Maj7 chord, Dom7 chord
+Dominant seventh, then major seventh | Dom7 chord, Maj7 chord
+Diminished triad, then augmented triad | Diminished triad, Augmented triad
+Augmented triad, then diminished triad | Augmented triad, Diminished triad`;
+let mode="cmp",lastKey=null,qs={r:0,t:0},miss={};
+function parseQuiz(){const out=[];let cur=null;
+  for(const raw of $("quizsrc").value.split("\n")){const l=raw.trim();if(!l||l[0]=="#")continue;
+    const m=l.match(/^\[(.+)\]$/);
+    if(m){cur={name:m[1].trim(),items:[]};out.push(cur);continue}
+    if(!cur){cur={name:"Quiz",items:[]};out.push(cur)}
+    const i=l.indexOf("|"),desc=i<0?"":l.slice(0,i).trim(),names=(i<0?l:l.slice(i+1)).split(",").map(x=>x.trim()).filter(Boolean);
+    if(names.length)cur.items.push({desc,names})}
+  return out.filter(L=>L.items.length)}
+function renderQuiz(sel){const Ls=parseQuiz();
+  $("quizlist").innerHTML=Ls.map(L=>`<option value="${esc(L.name)}">${esc(L.name)} (${L.items.length})</option>`).join("");
+  if(Ls.some(L=>L.name==sel))$("quizlist").value=sel}
+function resetQ(){$("qcard").textContent="?";$("qcard").classList.remove("rev")}
+function newIdRound(){
+  const lib=parseLib(),Ls=parseQuiz(),L=Ls.find(x=>x.name==$("quizlist").value)||Ls[0];
+  if(!L)throw new Error("There are no quiz lists. Add one under Quiz lists.");
+  const w=L.items.map((it,i)=>(L.name+"|"+i==lastKey&&L.items.length>1)?0:1+2*(miss[L.name+"|"+i]||0));
+  const r=Math.random()*w.reduce((a,b)=>a+b,0);let acc=0,idx=-1;
+  for(let i=0;i<w.length;i++){acc+=w[i];if(w[i]>0&&r<acc){idx=i;break}}
+  if(idx<0)idx=w.findLastIndex(x=>x>0);
+  const item=L.items[idx],shift=transposing?Math.floor(Math.random()*13)-6:0;
+  let t=0,ev=[],used=[];
+  for(const n of item.names){const g=lib[n.toLowerCase()];
+    if(!g||!g.files.length)throw new Error("Unknown or empty group: "+n);
+    const line=g.files[Math.floor(Math.random()*g.files.length)],p=parseLine(line);
+    for(const e of p.ev)ev.push({...e,m:e.m+shift,t:e.t+t});
+    used.push(g.name+": "+line);t+=p.len}
+  lastKey=L.name+"|"+idx;
+  round={mode:"id",item,key:lastKey,ev,len:t,used,shift,answered:false};
+  resetQ();$("answer").style.display="none"}
+function applyMode(m){mode=m=="id"?"id":"cmp";document.body.classList.toggle("idm",mode=="id");
+  $("modeCmp").classList.toggle("on",mode=="cmp");$("modeId").classList.toggle("on",mode=="id")}
+function setMode(m){if(m==mode)return;stop();round=null;applyMode(m);$("answer").style.display="none";resetQ();setStatus("");save()}
+$("modeCmp").onclick=()=>setMode("cmp");$("modeId").onclick=()=>setMode("id");
+$("quizlist").onchange=()=>{stop();round=null;resetQ();$("answer").style.display="none";save()};
+$("quizsrc").addEventListener("input",()=>{renderQuiz($("quizlist").value);save()});
+for(const [id,ok] of [["gotIt",true],["missed",false]])$(id).onclick=()=>{
+  if(!round||round.mode!="id"){setStatus("Press Play first.",true);return}
+  if(!round.answered){round.answered=true;qs.t++;
+    if(ok){qs.r++;if(miss[round.key])miss[round.key]--}else miss[round.key]=(miss[round.key]||0)+1}
+  setStatus((ok?"Nice. ":"Noted. ")+"Score: "+qs.r+" / "+qs.t);show()};
+$("quizsrc").value=saved.quiz!=null?saved.quiz:DEFAULT_QUIZ;renderQuiz(saved.quizlist);applyMode(saved.mode);
+const KEYS={" ":"play",p:"play",g:"gotIt",m:"missed",l:"loop",t:"transpose",a:"guessA",b:"guessB",r:"reveal",n:"next"};
 document.addEventListener("keydown",e=>{
   if(e.ctrlKey||e.metaKey||e.altKey||e.repeat)return;
   const t=e.target,tag=t.tagName;
   if(t.isContentEditable||tag=="TEXTAREA"||tag=="SELECT"||(tag=="INPUT"&&t.type!="range"&&t.type!="checkbox"&&t.type!="file"))return;
   const id=KEYS[e.key.toLowerCase()];if(!id)return;
+  if($(id).offsetParent===null)return;
   e.preventDefault();
   if(tag=="BUTTON"||tag=="SUMMARY")t.blur();
   $(id).click()});
