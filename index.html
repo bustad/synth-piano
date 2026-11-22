@@ -44,6 +44,8 @@
   .lrow.chr { width:calc(100% - 18px); margin-left:18px; opacity:.85; }
   .lrow.down { background:var(--accent); color:#fff; }
   .lrow.target { background:#6fd68a; color:#0b3b1b; border-color:#2fa85a; opacity:1; }
+  .white.target.dohome { background:linear-gradient(#cfe4ff,#6aa8f2); box-shadow:0 0 18px #3f8cf0 inset; }
+  .lrow.target.dohome { background:#8fbaf5; color:#0b2a55; border-color:#3f8cf0; }
   .reveal { flex-direction:row; align-items:center; gap:6px; margin-top:12px; }
   .links { width:100%; max-width:1000px; background:var(--panel); border-radius:12px; padding:6px 22px 18px;
            font-size:.9rem; line-height:1.55; }
@@ -150,6 +152,14 @@
       <input id="leap" type="number" min="1" max="35" step="1" value="12"
              title="Largest jump allowed between one note and the next">
     </label>
+    <label>Do every n notes (0 = off)
+      <input id="doEvery" type="number" min="0" max="20" step="1" value="0"
+             title="Insert middle C (Do) after every n random notes">
+    </label>
+    <label style="flex-direction:row;align-items:center;gap:6px"
+           title="Each gap is a random number from half of n (rounded up) up to n"><input type="checkbox" id="doRandom"> Random spacing</label>
+    <label style="flex-direction:row;align-items:center;gap:6px"
+           title="Begin every run with Do"><input type="checkbox" id="doFirst"> Start with Do</label>
     <button id="playBtn">Play</button>
     <span id="status">0 notes selected</span>
   </div>
@@ -207,6 +217,7 @@
       <li>Press <b>Select</b> and click the notes you want to practise. They get blue dots (you hear a short preview). Click again to remove one, or press <b>Clear</b>.</li>
       <li>Set the <b>Tempo</b> (10–100 BPM; the slider is logarithmic, so the slow end is finely adjustable).</li>
       <li>Press <b>Play</b>. On every beat a random selected note lights up green and stays lit until the next beat. The same note never appears twice in a row, and no jump is larger than the <b>Max leap</b> (default 12 semitones, one octave; if no other selected note is within reach, the same note repeats and the status line says so). Press <b>Stop</b> to end.</li>
+      <li><b>Do every n notes</b> puts a middle C (Do) after every n random notes, so you keep coming back to home. The Do lights up blue, takes a beat of its own, and uses the same <b>Sound delay</b> and <b>Play sound</b> settings as the other notes. It does not count toward the Max leap or the no-repeat rule. <b>Random spacing</b> makes each gap a random number from half of n (rounded up) up to n, and <b>Start with Do</b> begins every run on Do. Set n to 0 to switch it off.</li>
       <li><b>Play sound</b> lets you hear the note too. <b>Sound delay</b> sets how long after the light it sounds, as a fraction of a beat, so you can sing first and then check yourself. Turn Play sound off to train from sight alone.</li>
     </ol>
 
@@ -234,11 +245,11 @@
   </div>
 
   <section class="links" id="links" aria-label="Links">
-    <h2>Links to some related experimental pages</h2>
+    <h2>Links</h2>
     <!-- Placeholder links: replace the href (address), the title and the description of each item.
          Add or delete <li> lines as needed. -->
     <ul>
-      <li><a href="which-field/" target="_blank" rel="noopener">Ear training - Listen, then decide which field was played</a> - An experimental page intended as a tool for learning to hear chord progressions.</li>
+      <li><a href="which-field/" target="_blank" rel="noopener">Ear training</a> - An experimental page intended as a tool for learning to hear chord progressions.</li>
       <li><a href="synth-workshop/" target="_blank" rel="noopener">Synth workshop</a> - A small laboratory for learning about subtractive synthesis and Web Audio.</li>
       <!--
       <li><a href="https://example.com/link-3" target="_blank" rel="noopener">Placeholder link 3</a> – replace with a title and short description</li>
@@ -563,7 +574,9 @@ document.getElementById("trRnd").onclick = () => {
 // ---------- Sight-singing trainer ----------
 let selectMode = false, playing = false, timer = null, lastTarget = null;
 let soundTimer = null, offTimer = null, soundId = null;
-const delayEl = document.getElementById("delay"), leapEl = document.getElementById("leap");
+let lit = null, litDo = false, sinceDo = 0, doGap = null, startDoPending = false;   // lit key, and the "Do every n notes" counters
+const delayEl = document.getElementById("delay"), leapEl = document.getElementById("leap"),
+      doEl = document.getElementById("doEvery"), doRandomEl = document.getElementById("doRandom"), doFirstEl = document.getElementById("doFirst");
 const selected = new Set();
 const selBtn = document.getElementById("selBtn"), clrBtn = document.getElementById("clrBtn"),
       playBtn = document.getElementById("playBtn"), bpmEl = document.getElementById("bpm"),
@@ -600,17 +613,31 @@ bpmEl.oninput();
 function step() {
   const pool = [...selected];
   if (!pool.length) { stopTrainer(); return; }
-  // Next note: any selected note except the last one, no further away than the max leap
-  const maxLeap = Math.max(1, Math.min(35, parseInt(leapEl.value) || 12));
-  let cands = lastTarget == null ? pool
-            : pool.filter(n => n !== lastTarget && Math.abs(n - lastTarget) <= maxLeap);
-  let stuck = false;
-  if (!cands.length) { cands = [lastTarget]; stuck = pool.length > 1; }   // nothing within reach: repeat
-  const m = cands[Math.floor(Math.random() * cands.length)];
+  // Is it time for a Do? (always middle C; it doesn't count toward the leap or no-repeat rules)
+  const n = Math.max(0, Math.min(20, parseInt(doEl.value) || 0));
+  if (n === 0) doGap = null;
+  else if (doGap == null) {
+    const lo = Math.ceil(n / 2);
+    doGap = doRandomEl.checked ? lo + Math.floor(Math.random() * (n - lo + 1)) : n;
+  }
+  const isDo = startDoPending || (doGap != null && sinceDo >= doGap);
+  let m, stuck = false;
+  if (isDo) {
+    m = 60; startDoPending = false; sinceDo = 0; doGap = null;
+  } else {
+    // Next note: any selected note except the last random one, no further away than the max leap
+    const maxLeap = Math.max(1, Math.min(35, parseInt(leapEl.value) || 12));
+    let cands = lastTarget == null ? pool
+              : pool.filter(k => k !== lastTarget && Math.abs(k - lastTarget) <= maxLeap);
+    if (!cands.length) { cands = [lastTarget]; stuck = pool.length > 1; }   // nothing within reach: repeat
+    m = cands[Math.floor(Math.random() * cands.length)];
+    lastTarget = m; sinceDo++;
+  }
   updateStatus(stuck ? "Playing… no other selected note is within the max leap" : undefined);
-  if (lastTarget != null) keyEls[lastTarget].classList.remove("target");
-  lastTarget = m; keyEls[m].classList.add("target");
-  if (revealEl.checked) setLadderTarget(((m - 60) % 12 + 12) % 12);
+  if (lit != null) { keyEls[lit].classList.remove("target"); keyEls[lit].classList.remove("dohome"); }
+  lit = m; litDo = isDo; keyEls[m].classList.add("target");
+  if (isDo) keyEls[m].classList.add("dohome");
+  if (revealEl.checked) setLadderTarget(((m - 60) % 12 + 12) % 12, isDo);
   const beat = 60000 / getBpm();
   clearTimeout(soundTimer); clearTimeout(offTimer);
   if (soundId) noteOff(soundId);
@@ -628,19 +655,21 @@ function step() {
 function startTrainer() {
   if (!selected.size) { updateStatus("Select at least one note first"); return; }
   setSelectMode(false);
-  playing = true;
+  playing = true; sinceDo = 0; doGap = null; startDoPending = doFirstEl.checked;
   playBtn.textContent = "Stop"; playBtn.classList.add("on");
   selBtn.disabled = clrBtn.disabled = true;
   updateStatus(); step();
 }
 sndEl.onchange = () => { delayEl.disabled = !sndEl.checked; };
+doEl.onchange = () => { doEl.value = Math.max(0, Math.min(20, parseInt(doEl.value) || 0)); doGap = null; };
+doRandomEl.onchange = () => { doGap = null; };
 leapEl.onchange = () => { leapEl.value = Math.max(1, Math.min(35, parseInt(leapEl.value) || 12)); };
 function stopTrainer() {
   clearTimeout(timer); clearTimeout(soundTimer); clearTimeout(offTimer);
   if (soundId) { noteOff(soundId); soundId = null; }
   playing = false;
-  if (lastTarget != null) keyEls[lastTarget].classList.remove("target");
-  lastTarget = null;
+  if (lit != null) { keyEls[lit].classList.remove("target"); keyEls[lit].classList.remove("dohome"); }
+  lit = null; litDo = false; lastTarget = null;
   setLadderTarget(-1);
   playBtn.textContent = "Play"; playBtn.classList.remove("on");
   selBtn.disabled = clrBtn.disabled = false;
@@ -670,10 +699,12 @@ for (let i = 11; i >= 0; i--) {                             // highest tone at t
   b.onpointerup = up; b.onpointercancel = up;
   rowEls[i] = b; ladderEl.appendChild(b);
 }
-function setLadderTarget(i) { rowEls.forEach((r, j) => r.classList.toggle("target", j === i)); }
+function setLadderTarget(i, isDo) {
+  rowEls.forEach((r, j) => { r.classList.toggle("target", j === i); r.classList.toggle("dohome", j === i && !!isDo); });
+}
 revealEl.onchange = () => {
   if (!revealEl.checked) setLadderTarget(-1);
-  else if (lastTarget != null) setLadderTarget(((lastTarget - 60) % 12 + 12) % 12);
+  else if (lit != null) setLadderTarget(((lit - 60) % 12 + 12) % 12, litDo);
 };
 // ---------- Drone (a sustained Do) ----------
 let droneOn = false;
@@ -855,6 +886,7 @@ function collectSettings() {                       // everything that is saved, 
     transpose, octave: octaveShift,
     selected: [...selected], bpm: bpmEl.value, snd: sndEl.checked, delay: delayEl.value,
     leap: leapEl.value, reveal: revealEl.checked,
+    doEvery: doEl.value, doRandom: doRandomEl.checked, doFirst: doFirstEl.checked,
     droneOct: droneOctEl.value, droneInst: droneInstEl.value, droneVol: droneVolEl.value,
     synth: INSTRUMENTS, synthV: 3
   };
@@ -889,6 +921,9 @@ function applySettings(d) {
     sndEl.onchange();
     setSel(delayEl, d.delay); setNum(leapEl, d.leap, 1, 35);
     if (typeof d.reveal === "boolean") revealEl.checked = d.reveal;
+    setNum(doEl, d.doEvery, 0, 20);
+    if (typeof d.doRandom === "boolean") doRandomEl.checked = d.doRandom;
+    if (typeof d.doFirst === "boolean") doFirstEl.checked = d.doFirst;
     setSel(droneOctEl, d.droneOct); setSel(droneInstEl, d.droneInst); setNum(droneVolEl, d.droneVol, 0, 100);
   }
   renderSynth();
